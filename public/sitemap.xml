@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- 1. Homepage -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- 2. Student Results Portal & Performance Tracking -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=results</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+
+  <!-- 3. About Us & School History -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=about</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 4. Academic Curriculum & Subject Catalog -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=subjects</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 5. School Fees & Payment Portal -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=payment</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 6. Academic Calendar & Term Dates -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=calendar</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- 7. Campus Life & Media Gallery -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=gallery</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- 8. School Development Projects & Infrastructure -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=projects</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- 9. Mission, Vision & Core Values -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=mission</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- 10. Contact Us & Campus Location -->
+  <url>
+    <loc>https://holyghostacademy.edu.ng/?page=contact</loc>
+    <lastmod>2026-10-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+</urlset>

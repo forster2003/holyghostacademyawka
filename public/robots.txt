@@ -1,0 +1,19 @@
+# ==============================================================================
+# robots.txt for Holy Ghost Academy Secondary School (HGASS), Awka
+# Official Domain: https://holyghostacademy.edu.ng/
+# Motto: Moral and Academics (MALU)
+# ==============================================================================
+
+User-agent: *
+Allow: /
+Allow: /?page=*
+Disallow: /admin
+Disallow: /api/
+
+# LLM Web Agent Documentation
+# Machine-readable documentation about school structure, curriculum, and admissions:
+# https://holyghostacademy.edu.ng/llms.txt
+# https://holyghostacademy.edu.ng/llms-full.txt
+
+# XML Sitemaps
+Sitemap: https://holyghostacademy.edu.ng/sitemap.xml

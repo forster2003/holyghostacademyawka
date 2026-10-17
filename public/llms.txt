@@ -1,0 +1,30 @@
+# Holy Ghost Academy Secondary School, Awka (HGASS)
+
+> Premier Catholic Co-Educational Secondary School committed to Moral and Academic Excellence (MALU) in Awka, Anambra State, Nigeria.
+
+Holy Ghost Academy Secondary School (HGASS) is an elite institution located at Kamali Homes, Ngozika Housing Estate, Phase 2, Awka, Anambra State, Nigeria, operating under the auspices of the Catholic Diocese of Awka. The institution integrates high academic standards with strong moral formation, cutting-edge STEM education, and digital student performance tracking.
+
+## Core Services & Online Portals
+
+- [Homepage](https://holyghostacademy.edu.ng/): Official gateway, news announcements, photo gallery, leadership, and upcoming school events.
+- [Student Academic Portal](https://holyghostacademy.edu.ng/?page=results): Secure student results checking for Termly Continuous Assessment (CA) report cards and Annual Cumulative Sessional Transcripts with Recharts performance grade tracking.
+- [School Fees & Payment Desk](https://holyghostacademy.edu.ng/?page=payment): Official school bill payment via United Bank for Africa (UBA), instant proof of payment upload, and bursary verification.
+- [Academic Curriculum & Subjects](https://holyghostacademy.edu.ng/?page=subjects): Comprehensive Junior Secondary (JSS 1 - JSS 3) and Senior Secondary (SS 1 - SS 3) WAEC/NECO/BECE accredited subjects.
+- [Academic Calendar](https://holyghostacademy.edu.ng/?page=calendar): Sessional calendar, term resumption dates, mid-term breaks, examination periods, and inter-house sports.
+- [Campus Infrastructure & Projects](https://holyghostacademy.edu.ng/?page=projects): Modern science laboratories, ICT digital suites, hostel accommodations, sports pavilion, and chapel.
+- [About Us & History](https://holyghostacademy.edu.ng/?page=about): Founded in 2013 by Late Rev. Fr. Dr. Emmanuel Obuna, managed by Engr. ThankGod Ndibe under the Catholic Diocese of Awka.
+- [Contact & Campus Visit](https://holyghostacademy.edu.ng/?page=contact): Physical address, official admissions helpline (+234 803 000 0000), email (info@holyghostacademy.edu.ng), and inquiry desk.
+
+## Institution Highlights
+
+- **Motto**: Moral and Academics (MALU)
+- **Founded**: 2013
+- **Affiliation**: Catholic Diocese of Awka, Anambra State, Nigeria
+- **Campus Location**: Kamali Homes, Ngozika Housing Estate, Phase 2, Awka, Anambra State
+- **Examination Accreditations**: WAEC, NECO, BECE, JAMB UTME Preparatory Center
+- **Key Leadership**: Engr. ThankGod Ndibe (School Manager), Sir Emma E. Ezeokafor (Principal)
+
+## Full Documentation for AI Systems
+
+For detailed subject breakdowns, terminal score weights, grading formulas, and fee schedules, refer to:
+- [Full LLM Knowledge Document](https://holyghostacademy.edu.ng/llms-full.txt)

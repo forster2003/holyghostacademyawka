@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1226"/>
+      <stop offset="45%" stop-color="#14213d"/>
+      <stop offset="100%" stop-color="#1b3a4b"/>
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="oxbloodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#800000"/>
+      <stop offset="100%" stop-color="#4a0404"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Subtle Decorative Accents -->
+  <circle cx="1150" cy="80" r="320" fill="#166534" opacity="0.12"/>
+  <circle cx="80" cy="550" r="280" fill="#800000" opacity="0.18"/>
+  <circle cx="950" cy="500" r="200" fill="#F59E0B" opacity="0.08"/>
+
+  <!-- Top Accent Stripe -->
+  <rect x="0" y="0" width="1200" height="10" fill="url(#goldGradient)"/>
+
+  <!-- Card Container -->
+  <g transform="translate(80, 80)">
+    
+    <!-- Header Crest & Tag -->
+    <g transform="translate(0, 0)">
+      <!-- Crest Badge Circle -->
+      <circle cx="50" cy="50" r="48" fill="url(#oxbloodGradient)" stroke="#F59E0B" stroke-width="4" filter="url(#shadow)"/>
+      <!-- Cross / Dove Symbol in Crest -->
+      <path d="M50 22 L50 78 M32 38 L68 38" stroke="#FCD34D" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="50" cy="38" r="6" fill="#FFF"/>
+
+      <!-- Institution Sub-badge -->
+      <rect x="120" y="24" width="340" height="34" rx="17" fill="#166534" opacity="0.9"/>
+      <text x="136" y="47" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#FCD34D" letter-spacing="2">CATHOLIC DIOCESE OF AWKA</text>
+    </g>
+
+    <!-- Main Title -->
+    <text x="0" y="165" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="52" font-weight="900" fill="#FFFFFF" letter-spacing="-1">
+      HOLY GHOST ACADEMY
+    </text>
+    <text x="0" y="225" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="700" fill="#FCD34D">
+      SECONDARY SCHOOL, AWKA
+    </text>
+
+    <!-- Motto Ribbon -->
+    <g transform="translate(0, 260)">
+      <rect x="0" y="0" width="320" height="38" rx="6" fill="url(#oxbloodGradient)"/>
+      <text x="20" y="25" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" fill="#FFFFFF" letter-spacing="3">MOTTO: MORAL &amp; ACADEMICS</text>
+    </g>
+
+    <!-- Description -->
+    <text x="0" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#E2E8F0" width="800">
+      Official Portal: Digital Student Results &amp; Termly Performance Tracking,
+    </text>
+    <text x="0" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#CBD5E1">
+      Online Fee Payment, Academic Curriculum, and Campus Administration.
+    </text>
+
+    <!-- Bottom Highlights Grid -->
+    <g transform="translate(0, 420)">
+      <!-- Pill 1: Location -->
+      <rect x="0" y="0" width="300" height="42" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="20" cy="21" r="5" fill="#22C55E"/>
+      <text x="35" y="26" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#F1F5F9">Ngozika Housing Estate, Awka</text>
+
+      <!-- Pill 2: Student Portal -->
+      <rect x="320" y="0" width="320" height="42" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="340" cy="21" r="5" fill="#F59E0B"/>
+      <text x="355" y="26" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#F1F5F9">Termly &amp; Annual Results Desk</text>
+
+      <!-- Pill 3: Accreditations -->
+      <rect x="660" y="0" width="280" height="42" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="680" cy="21" r="5" fill="#38BDF8"/>
+      <text x="695" y="26" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#F1F5F9">WAEC • NECO • BECE Accredited</text>
+    </g>
+
+  </g>
+
+  <!-- Bottom Accent Stripe -->
+  <rect x="0" y="622" width="1200" height="8" fill="url(#oxbloodGradient)"/>
+</svg>

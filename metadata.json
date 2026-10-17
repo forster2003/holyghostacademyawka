@@ -1,0 +1,6 @@
+{
+  "name": "Holy Ghost Academy",
+  "description": "Official portal and administration dashboard for Holy Ghost Academy Secondary School, Kamali Homes, Ngozika Housing Estate, Awka, Anambra State, Nigeria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
