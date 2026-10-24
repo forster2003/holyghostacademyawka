@@ -252,6 +252,17 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                   <span className="px-2 py-0.5 bg-slate-200 text-slate-700 font-bold rounded-lg text-xs uppercase">
                     SEX: {activeStudent.gender || 'Male'}
                   </span>
+                  {(() => {
+                    const passFail = activeStudent.passFailStatus || computeAcademicMetrics(activeStudent.subjectScores, activeStudent).passFailStatus;
+                    const isPass = passFail.toLowerCase().includes('pass');
+                    return (
+                      <span className={`px-2.5 py-0.5 font-black rounded-lg text-xs uppercase tracking-wider ${
+                        isPass ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'
+                      }`}>
+                        {isPass ? '✓ PASSED' : '✕ FAILED'}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -644,6 +655,7 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                   <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-blue-900 font-heading text-[10px] text-center">GPA</th>
                   <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-brand-green font-heading text-[10px] text-center">Position</th>
                   <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-emerald-800 font-heading text-[10px]">Promotion Status</th>
+                  <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-slate-800 font-heading text-[10px] text-center">Pass or Failed</th>
                   <th scope="col" className="px-3 py-3 font-bold uppercase tracking-wider text-slate-600 font-heading text-[10px] text-right">Actions</th>
                 </tr>
               </thead>
@@ -686,6 +698,19 @@ export const StudentSheetSection: React.FC<StudentSheetSectionProps> = ({
                           <GraduationCap className="w-3 h-3 text-emerald-700" />
                           <span>{r.promotionStatus || metrics.promotionStatus}</span>
                         </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {(() => {
+                          const pf = r.passFailStatus || metrics.passFailStatus;
+                          const isPass = pf.toLowerCase().includes('pass');
+                          return (
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              isPass ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'
+                            }`}>
+                              {isPass ? 'PASSED' : 'FAILED'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">

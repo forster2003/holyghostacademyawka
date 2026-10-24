@@ -13,6 +13,7 @@ import {
 } from './types';
 import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES, INITIAL_ATTENDANCE_RECORDS, INITIAL_CALENDAR_EVENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
+import { buildCumulativeResultFromTerms, syncAllCumulativeResults } from './gradeUtils';
 
 export function useSchoolStore() {
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -105,15 +106,18 @@ export function useSchoolStore() {
                 };
               })
             }));
-            setResults(normalizedResults);
-            localStorage.setItem('hgass_results', JSON.stringify(normalizedResults));
+            const syncedResults = syncAllCumulativeResults(normalizedResults);
+            setResults(syncedResults);
+            localStorage.setItem('hgass_results', JSON.stringify(syncedResults));
           } catch {
-            setResults(INITIAL_RESULTS);
-            localStorage.setItem('hgass_results', JSON.stringify(INITIAL_RESULTS));
+            const syncedInitial = syncAllCumulativeResults(INITIAL_RESULTS);
+            setResults(syncedInitial);
+            localStorage.setItem('hgass_results', JSON.stringify(syncedInitial));
           }
         } else {
-          setResults(INITIAL_RESULTS);
-          localStorage.setItem('hgass_results', JSON.stringify(INITIAL_RESULTS));
+          const syncedInitial = syncAllCumulativeResults(INITIAL_RESULTS);
+          setResults(syncedInitial);
+          localStorage.setItem('hgass_results', JSON.stringify(syncedInitial));
         }
 
         const storedAttendance = localStorage.getItem('hgass_attendance');
@@ -134,8 +138,27 @@ export function useSchoolStore() {
           localStorage.setItem('hgass_messages', JSON.stringify(INITIAL_MESSAGES));
         }
 
-        if (storedPayments) setPayments(JSON.parse(storedPayments));
-        else {
+        if (storedPayments) {
+          try {
+            const parsedPayments: PaymentRecord[] = JSON.parse(storedPayments);
+            const cleanedPayments = parsedPayments.map(p => {
+              if (p.purpose === 'Boarding & Hostel Fees' || p.amount === 145000 || p.amount === 165000) {
+                return {
+                  ...p,
+                  purpose: 'School Fees / Tuition',
+                  amount: 35000,
+                  remarks: (p.remarks || '').replace(/boarding|hostel/gi, 'Tuition') || 'Tuition Fee'
+                };
+              }
+              return p;
+            });
+            setPayments(cleanedPayments);
+            localStorage.setItem('hgass_payments', JSON.stringify(cleanedPayments));
+          } catch {
+            setPayments(INITIAL_PAYMENTS);
+            localStorage.setItem('hgass_payments', JSON.stringify(INITIAL_PAYMENTS));
+          }
+        } else {
           setPayments(INITIAL_PAYMENTS);
           localStorage.setItem('hgass_payments', JSON.stringify(INITIAL_PAYMENTS));
         }
@@ -222,7 +245,20 @@ export function useSchoolStore() {
         const storedCalendar = localStorage.getItem('hgass_calendar_events');
         if (storedCalendar) {
           try {
-            setCalendarEvents(JSON.parse(storedCalendar));
+            const parsedEvents: AcademicCalendarEvent[] = JSON.parse(storedCalendar);
+            const cleanedEvents = parsedEvents.map(ev => {
+              if ((ev.targetAudience as any) === 'Boarding Students') {
+                return {
+                  ...ev,
+                  targetAudience: 'All Students' as const,
+                  title: ev.title.replace(/Boarding Students/gi, 'All Students'),
+                  description: ev.description.replace(/Boarding students/gi, 'All students')
+                };
+              }
+              return ev;
+            });
+            setCalendarEvents(cleanedEvents);
+            localStorage.setItem('hgass_calendar_events', JSON.stringify(cleanedEvents));
           } catch {
             setCalendarEvents(INITIAL_CALENDAR_EVENTS);
             localStorage.setItem('hgass_calendar_events', JSON.stringify(INITIAL_CALENDAR_EVENTS));
@@ -319,8 +355,9 @@ export function useSchoolStore() {
             }
             if (!errResults && dbResults && dbResults.length > 0) {
               const mapped = dbResults.map(r => mapFromDb('student_results', r));
-              setResults(mapped);
-              localStorage.setItem('hgass_results', JSON.stringify(mapped));
+              const synced = syncAllCumulativeResults(mapped);
+              setResults(synced);
+              localStorage.setItem('hgass_results', JSON.stringify(synced));
             }
             if (!errMsg && dbMsg && dbMsg.length > 0) {
               const mapped = dbMsg.map(r => mapFromDb('contact_messages', r));
@@ -372,6 +409,7 @@ export function useSchoolStore() {
     delete cleaned.grade_point;
     delete cleaned.accredited_grade_bracket;
     delete cleaned.class_standing;
+    delete cleaned.pass_fail_status;
     return cleaned;
   };
 
@@ -710,17 +748,58 @@ export function useSchoolStore() {
 
   // --- Result Actions ---
   const addResult = (item: StudentResult) => {
-    const updated = [...results.filter(r => r.id !== item.id && !(r.studentId === item.studentId && r.term === item.term && r.academicSession === item.academicSession)), item];
-    setResults(updated);
-    localStorage.setItem('hgass_results', JSON.stringify(updated));
+    const baseUpdated = [...results.filter(r => r.id !== item.id && !(r.studentId === item.studentId && r.term === item.term && r.academicSession === item.academicSession)), item];
+
+    let finalResults = baseUpdated;
+
+    // Automatically link with the Cumulative Results Section:
+    // When a termly result is inputted, compile & update the student's Annual Cumulative record!
+    if (!item.isCumulative && item.term !== 'Annual Cumulative' && !item.term.toLowerCase().includes('cumulative')) {
+      const compiledCumulative = buildCumulativeResultFromTerms(item.studentId, item.academicSession, baseUpdated);
+      if (compiledCumulative) {
+        const cumIndex = baseUpdated.findIndex(
+          r => r.studentId.trim().toUpperCase() === item.studentId.trim().toUpperCase() &&
+               r.academicSession.trim() === item.academicSession.trim() &&
+               (r.isCumulative || r.term === 'Annual Cumulative')
+        );
+        if (cumIndex >= 0) {
+          finalResults = baseUpdated.map((r, idx) => idx === cumIndex ? compiledCumulative : r);
+        } else {
+          finalResults = [...baseUpdated, compiledCumulative];
+        }
+        syncWrite('student_results', 'insert', compiledCumulative);
+      }
+    }
+
+    setResults(finalResults);
+    localStorage.setItem('hgass_results', JSON.stringify(finalResults));
     syncWrite('student_results', 'insert', item);
   };
 
   const editResult = (id: string, updatedFields: Partial<StudentResult>) => {
     const updated = results.map(item => item.id === id ? { ...item, ...updatedFields } as StudentResult : item);
-    setResults(updated);
-    localStorage.setItem('hgass_results', JSON.stringify(updated));
     const target = updated.find(item => item.id === id);
+
+    let finalResults = updated;
+    if (target && !target.isCumulative && target.term !== 'Annual Cumulative' && !target.term.toLowerCase().includes('cumulative')) {
+      const compiledCumulative = buildCumulativeResultFromTerms(target.studentId, target.academicSession, updated);
+      if (compiledCumulative) {
+        const cumIndex = updated.findIndex(
+          r => r.studentId.trim().toUpperCase() === target.studentId.trim().toUpperCase() &&
+               r.academicSession.trim() === target.academicSession.trim() &&
+               (r.isCumulative || r.term === 'Annual Cumulative')
+        );
+        if (cumIndex >= 0) {
+          finalResults = updated.map((r, idx) => idx === cumIndex ? compiledCumulative : r);
+        } else {
+          finalResults = [...updated, compiledCumulative];
+        }
+        syncWrite('student_results', 'update', compiledCumulative);
+      }
+    }
+
+    setResults(finalResults);
+    localStorage.setItem('hgass_results', JSON.stringify(finalResults));
     if (target) syncWrite('student_results', 'update', target);
   };
 
@@ -731,10 +810,25 @@ export function useSchoolStore() {
     syncWrite('student_results', 'delete', id);
   };
 
+  const syncCumulativeRecords = () => {
+    const synced = syncAllCumulativeResults(results);
+    setResults(synced);
+    localStorage.setItem('hgass_results', JSON.stringify(synced));
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const cumRows = synced.filter(r => r.isCumulative || r.term === 'Annual Cumulative').map(r => mapToDb('student_results', r));
+        if (cumRows.length > 0) {
+          supabase.from('student_results').upsert(cumRows).then(() => {});
+        }
+      }
+    }
+  };
+
   const importResultsList = (resultsList: StudentResult[]) => {
-    const updated = [...resultsList];
-    setResults(updated);
-    localStorage.setItem('hgass_results', JSON.stringify(updated));
+    const syncedList = syncAllCumulativeResults(resultsList);
+    setResults(syncedList);
+    localStorage.setItem('hgass_results', JSON.stringify(syncedList));
 
     // Upload in batch to Supabase
     if (isSupabaseConfigured()) {
@@ -1191,6 +1285,7 @@ export function useSchoolStore() {
     editResult,
     deleteResult,
     importResultsList,
+    syncCumulativeRecords,
     updateStudentPromotionStatus,
     addStaffMember,
     editStaffMember,

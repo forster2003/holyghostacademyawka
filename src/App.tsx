@@ -138,7 +138,8 @@ export default function App() {
     aboutUsImage,
     aboutUsBadge,
     updateAboutUsImage,
-    resetAboutUsImage
+    resetAboutUsImage,
+    syncCumulativeRecords
   } = useSchoolStore();
 
   const handleScrollTop = () => {
@@ -287,6 +288,7 @@ export default function App() {
             onUpdateAboutUsImage={updateAboutUsImage}
             onResetAboutUsImage={resetAboutUsImage}
             onNavigatePublicPage={(page) => setCurrentPage(page)}
+            onSyncCumulative={syncCumulativeRecords}
             initialActiveTab={adminInitialTab}
             initialSearchQuery={adminSearchQuery}
             initialSelectedResultId={adminSelectedResultId || undefined}
@@ -356,7 +358,7 @@ export default function App() {
               </span>
               <div>
                 <h3 className="font-bold text-xs sm:text-sm font-heading text-brand-green uppercase tracking-wide">Downloads & Publications Board</h3>
-                <p className="text-[10px] text-slate-400">Access official academic calendars, boarding requirements, syllabus regulations, and book lists instantly.</p>
+                <p className="text-[10px] text-slate-400">Access official academic calendars, admissions guidelines, syllabus regulations, and book lists instantly.</p>
               </div>
             </div>
 

@@ -125,7 +125,33 @@ export interface AcademicEvaluationMetrics {
   accreditedGradeBracket: string; // e.g. "Distinction (A1) - Grade A"
   classStanding: string; // e.g. "1st Class Honors - Exceptional Scholar"
   promotionStatus: string; // e.g. "Promoted to SS 3"
+  passFailStatus: 'Passed' | 'Failed'; // Official examination decision: Pass or Failed
   totalSubjects: number;
+  passedSubjectsCount: number;
+  failedSubjectsCount: number;
+}
+
+/**
+ * Evaluate overall examination outcome: Pass or Failed
+ */
+export function getPassFailStatus(
+  terminalAverage: number = 0,
+  failedSubjectsCount: number = 0,
+  promotionStatus?: string
+): 'Passed' | 'Failed' {
+  if (promotionStatus) {
+    const s = promotionStatus.toLowerCase();
+    if (s.includes('repeat') || s.includes('failed') || s.includes('probation') || s.includes('not promoted')) {
+      return 'Failed';
+    }
+    if (s.includes('promoted') || s.includes('graduated') || s.includes('passed out') || s.includes('in good standing')) {
+      return 'Passed';
+    }
+  }
+  // Standard diocesan threshold: terminal average >= 50% or >= 40% with <= 2 failed subjects
+  if (terminalAverage >= 50) return 'Passed';
+  if (terminalAverage >= 40 && failedSubjectsCount <= 2) return 'Passed';
+  return 'Failed';
 }
 
 /**
@@ -194,15 +220,26 @@ export function computeAcademicMetrics(
     );
   }
 
+  const passedSubjectsCount = totalSubjects - failedSubjectsCount;
+  const effectiveAverage = savedResult?.terminalAverage !== undefined ? savedResult.terminalAverage : calculatedAverage;
+  const passFailStatus: 'Passed' | 'Failed' = (savedResult?.passFailStatus as 'Passed' | 'Failed') || getPassFailStatus(
+    effectiveAverage,
+    failedSubjectsCount,
+    promotionStatus
+  );
+
   return {
     grossTotalMarks: savedResult?.grossTotalMarks !== undefined ? savedResult.grossTotalMarks : calculatedGrossTotal,
     totalMaxMarks,
-    terminalAverage: savedResult?.terminalAverage !== undefined ? savedResult.terminalAverage : calculatedAverage,
+    terminalAverage: effectiveAverage,
     gradePoint: savedResult?.gradePoint !== undefined ? savedResult.gradePoint : calculatedGPA,
     accreditedGradeBracket,
     classStanding,
     promotionStatus,
+    passFailStatus,
     totalSubjects,
+    passedSubjectsCount,
+    failedSubjectsCount,
   };
 }
 
@@ -285,7 +322,10 @@ export interface CumulativeSessionEvaluation {
   accreditedGradeBracket: string;
   classStanding: string;
   promotionStatus: string;
+  passFailStatus: 'Passed' | 'Failed';
   totalSubjects: number;
+  passedSubjectsCount: number;
+  failedSubjectsCount: number;
 }
 
 /**
@@ -337,21 +377,28 @@ export function computeSessionCumulativeMetrics(
     else classStanding = 'Academic Warning - Remedial Attention Required';
   }
 
-  // Promotion status
-  const failedCount = subjectScores.filter(s => {
+  // Promotion status & failed count
+  const failedSubjectsCount = subjectScores.filter(s => {
     const avg = s.cumulativeAverage !== undefined ? s.cumulativeAverage : (s.totalScore || 0);
     return avg < 40;
   }).length;
+  const passedSubjectsCount = totalSubjects - failedSubjectsCount;
 
   let promotionStatus = studentMeta?.promotionStatus;
   if (!promotionStatus || !promotionStatus.trim()) {
     promotionStatus = computePromotionStatus(
       studentMeta?.classLevel || 'SS 2',
       sessionAverage,
-      failedCount,
+      failedSubjectsCount,
       'Annual Cumulative'
     );
   }
+
+  const passFailStatus: 'Passed' | 'Failed' = (studentMeta?.passFailStatus as 'Passed' | 'Failed') || getPassFailStatus(
+    sessionAverage,
+    failedSubjectsCount,
+    promotionStatus
+  );
 
   return {
     sessionGrossTotal,
@@ -361,6 +408,188 @@ export function computeSessionCumulativeMetrics(
     accreditedGradeBracket,
     classStanding,
     promotionStatus,
-    totalSubjects
+    passFailStatus,
+    totalSubjects,
+    passedSubjectsCount,
+    failedSubjectsCount
   };
+}
+
+/**
+ * Automatically compile and generate or update an annual cumulative result record 
+ * from all termly (1st, 2nd, 3rd) records of a student for a specific academic session.
+ */
+export function buildCumulativeResultFromTerms(
+  studentId: string,
+  academicSession: string,
+  allResults: StudentResult[]
+): StudentResult | null {
+  const cleanId = studentId.trim().toUpperCase();
+  const cleanSession = academicSession.trim();
+
+  // Find all non-cumulative termly records for this student and session
+  const termRecords = allResults.filter(
+    (r) =>
+      r.studentId.trim().toUpperCase() === cleanId &&
+      r.academicSession.trim() === cleanSession &&
+      !r.isCumulative &&
+      r.term !== 'Annual Cumulative' &&
+      !r.term.toLowerCase().includes('cumulative')
+  );
+
+  if (termRecords.length === 0) return null;
+
+  // Use the latest term record (or 3rd, 2nd, 1st) for primary student metadata
+  const isTerm1 = (termStr?: string) => {
+    const t = (termStr || '').toLowerCase();
+    return t.includes('1st') || t.includes('first') || t.includes('term 1') || t.includes('term1');
+  };
+  const isTerm2 = (termStr?: string) => {
+    const t = (termStr || '').toLowerCase();
+    return t.includes('2nd') || t.includes('second') || t.includes('term 2') || t.includes('term2');
+  };
+  const isTerm3 = (termStr?: string) => {
+    const t = (termStr || '').toLowerCase();
+    return t.includes('3rd') || t.includes('third') || t.includes('term 3') || t.includes('term3');
+  };
+
+  const term3Rec = termRecords.find((r) => isTerm3(r.term));
+  const term2Rec = termRecords.find((r) => isTerm2(r.term));
+  const term1Rec = termRecords.find((r) => isTerm1(r.term));
+  const latestRec = term3Rec || term2Rec || term1Rec || termRecords[termRecords.length - 1];
+
+  // Gather all unique subjects across all completed terms
+  const subjectMap = new Map<string, { term1?: number; term2?: number; term3?: number }>();
+
+  termRecords.forEach((rec) => {
+    rec.subjectScores?.forEach((sub) => {
+      const key = sub.subject.trim();
+      if (!subjectMap.has(key)) {
+        subjectMap.set(key, {});
+      }
+      const entry = subjectMap.get(key)!;
+      const score = Number(sub.totalScore) || 0;
+      if (isTerm1(rec.term)) entry.term1 = score;
+      else if (isTerm2(rec.term)) entry.term2 = score;
+      else if (isTerm3(rec.term)) entry.term3 = score;
+    });
+  });
+
+  if (subjectMap.size === 0) return null;
+
+  // Build compiled cumulative subject scores
+  const compiledSubjects: SubjectScore[] = Array.from(subjectMap.entries()).map(([subjName, scores]) => {
+    const metrics = computeCumulativeSubjectMetrics(scores.term1, scores.term2, scores.term3);
+    return {
+      subject: subjName,
+      term1Score: scores.term1,
+      term2Score: scores.term2,
+      term3Score: scores.term3,
+      cumulativeTotal: metrics.cumulativeTotal,
+      cumulativeAverage: metrics.cumulativeAverage,
+      cumulativeGrade: metrics.grade,
+      testScore: 40,
+      examScore: 60,
+      totalScore: metrics.cumulativeAverage,
+      grade: metrics.grade,
+      remarks: metrics.remark,
+      passFail: metrics.cumulativeAverage >= 40 ? 'Pass' : 'Failed'
+    };
+  });
+
+  const sessionMetrics = computeSessionCumulativeMetrics(compiledSubjects, latestRec);
+
+  // Termly averages
+  const term1Average = term1Rec ? (term1Rec.terminalAverage ?? computeAcademicMetrics(term1Rec.subjectScores, term1Rec).terminalAverage) : undefined;
+  const term2Average = term2Rec ? (term2Rec.terminalAverage ?? computeAcademicMetrics(term2Rec.subjectScores, term2Rec).terminalAverage) : undefined;
+  const term3Average = term3Rec ? (term3Rec.terminalAverage ?? computeAcademicMetrics(term3Rec.subjectScores, term3Rec).terminalAverage) : undefined;
+
+  // Existing cumulative record ID if already present
+  const existingCumRec = allResults.find(
+    (r) =>
+      r.studentId.trim().toUpperCase() === cleanId &&
+      r.academicSession.trim() === cleanSession &&
+      (r.isCumulative || r.term === 'Annual Cumulative')
+  );
+
+  const cumResultId = existingCumRec 
+    ? existingCumRec.id 
+    : `res-cum-${cleanId.replace(/[^a-zA-Z0-9]/g, '_')}-${cleanSession.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+  const failedCount = compiledSubjects.filter(s => (s.cumulativeAverage || 0) < 40).length;
+  const passFailStatus: 'Passed' | 'Failed' = getPassFailStatus(
+    sessionMetrics.sessionAverage,
+    failedCount,
+    sessionMetrics.promotionStatus
+  );
+
+  const cumulativeRecord: StudentResult = {
+    id: cumResultId,
+    studentId: latestRec.studentId,
+    studentName: latestRec.studentName,
+    classLevel: latestRec.classLevel,
+    term: 'Annual Cumulative',
+    academicSession: cleanSession,
+    gender: latestRec.gender || 'Male',
+    rollNumber: latestRec.rollNumber || '01',
+    position: latestRec.position || '1st in Class',
+    attendance: latestRec.attendance || '250 of 255 Days',
+    principalRemarks: latestRec.principalRemarks || 'Commendable academic progression and moral conduct throughout the session.',
+    teacherRemarks: latestRec.teacherRemarks || 'Consistent effort and diligent coursework.',
+    subjectScores: compiledSubjects,
+    passportPhoto: latestRec.passportPhoto,
+    accessPassword: latestRec.accessPassword,
+    isCumulative: true,
+    term1Average,
+    term2Average,
+    term3Average,
+    cumulativeSessionAverage: sessionMetrics.sessionAverage,
+    sessionGrossTotalMarks: sessionMetrics.sessionGrossTotal,
+    sessionTotalMaxMarks: sessionMetrics.sessionTotalMaxMarks,
+    grossTotalMarks: sessionMetrics.sessionGrossTotal,
+    terminalAverage: sessionMetrics.sessionAverage,
+    gradePoint: sessionMetrics.gradePoint,
+    accreditedGradeBracket: sessionMetrics.accreditedGradeBracket,
+    classStanding: sessionMetrics.classStanding,
+    promotionStatus: sessionMetrics.promotionStatus,
+    passFailStatus
+  };
+
+  return cumulativeRecord;
+}
+
+/**
+ * Scan all records and ensure every student who has termly results has an up-to-date cumulative record.
+ */
+export function syncAllCumulativeResults(currentResults: StudentResult[]): StudentResult[] {
+  // Collect all unique (studentId, academicSession) pairs from non-cumulative records
+  const studentSessionPairs = new Set<string>();
+  currentResults.forEach((r) => {
+    if (!r.isCumulative && r.term !== 'Annual Cumulative' && !r.term.toLowerCase().includes('cumulative')) {
+      studentSessionPairs.add(`${r.studentId.trim().toUpperCase()}:::${r.academicSession.trim()}`);
+    }
+  });
+
+  let updatedList = [...currentResults];
+
+  studentSessionPairs.forEach((pair) => {
+    const [sId, sSession] = pair.split(':::');
+    const cumRecord = buildCumulativeResultFromTerms(sId, sSession, updatedList);
+    if (cumRecord) {
+      // Upsert into updatedList
+      const idx = updatedList.findIndex(
+        (r) =>
+          r.studentId.trim().toUpperCase() === sId &&
+          r.academicSession.trim() === sSession &&
+          (r.isCumulative || r.term === 'Annual Cumulative')
+      );
+      if (idx >= 0) {
+        updatedList[idx] = cumRecord;
+      } else {
+        updatedList.push(cumRecord);
+      }
+    }
+  });
+
+  return updatedList;
 }

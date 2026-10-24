@@ -85,7 +85,7 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
                   Holy Ghost Academy Secondary School
                 </h2>
                 <p className="text-xs text-slate-500 leading-relaxed font-sans">
-                  Our frontdesk administrators are available Monday through Friday, 8:00 AM to 4:00 PM (WAT) to answer enrollment inquiries, verify boarding protocols, and manage payments.
+                  Our frontdesk administrators are available Monday through Friday, 8:00 AM to 4:00 PM (WAT) to answer enrollment inquiries, verify academic protocols, and manage payments.
                 </p>
               </div>
 
@@ -149,7 +149,7 @@ export default function ContactView({ onSendMessage }: ContactViewProps) {
               <div className="p-3 bg-slate-50 rounded border border-slate-200 flex items-start space-x-2.5 text-[11px] text-slate-500 font-sans">
                 <ShieldAlert className="w-4.5 h-4.5 text-brand-green shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
-                  <strong>Security Notification:</strong> All payments regarding admission deposits, syllabus books, and boarding hostel requirements must only be processed via official church-authorized banks. Beware of digital fraudulent actors.
+                  <strong>Security Notification:</strong> All payments regarding tuition fees, admission deposits, and syllabus books must only be processed via official church-authorized banks. Beware of digital fraudulent actors.
                 </p>
               </div>
             </div>

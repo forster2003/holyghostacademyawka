@@ -223,7 +223,7 @@ export const PaymentRevenueChart: React.FC<PaymentRevenueChartProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            Track tuition inflows, boarding remittances, and PTA fee trends over the academic calendar.
+            Track tuition inflows, PTA fee trends, and educational remittances over the academic calendar.
           </p>
         </div>
 

@@ -59,6 +59,7 @@ export interface SubjectScore {
   totalScore: number; // ca1 + ca2 + exam = 100
   grade: string; // A, B, C, D, E, F
   remarks: string; // Assessment remark
+  passFail?: 'Pass' | 'Failed' | string; // Subject outcome: Pass or Failed
   // Academic Session Cumulative Fields
   term1Score?: number; // 1st Term total score (max 100)
   term2Score?: number; // 2nd Term total score (max 100)
@@ -87,6 +88,7 @@ export interface StudentResult {
   gradePoint?: number; // Grade Point Average (GPA out of 5.0)
   accreditedGradeBracket?: string; // Accredited Grade Bracket (e.g. Distinction, Upper Credit)
   classStanding?: string; // Class Standing / Honor roll
+  passFailStatus?: 'Passed' | 'Failed' | string; // Official examination decision: Pass or Failed
   principalRemarks: string;
   teacherRemarks: string;
   subjectScores: SubjectScore[];
@@ -121,7 +123,7 @@ export interface PaymentRecord {
   studentName: string;
   studentId?: string;
   classLevel: string; // e.g. "JSS 1", "SS 2", "Prospective Student", "Alumnus / Donor"
-  purpose: string; // 'School Fees / Tuition', 'Boarding & Hostel Fees', 'Admission & Application Form', 'PTA Levy', 'Uniform & Textbooks', 'Diocesan Project Donation', 'Other'
+  purpose: string; // 'School Fees / Tuition', 'Admission & Application Form', 'PTA Levy', 'Uniform & Textbooks', 'Diocesan Project Donation', 'Other'
   amount: number; // in Naira (₦)
   paymentDate: string;
   paymentMethod: string; // 'UBA Direct Bank Transfer', 'USSD Transfer', 'Mobile Banking App', 'Bank Branch Teller Deposit', 'POS / Card'
@@ -232,7 +234,7 @@ export type AcademicEventType = 'Exam' | 'Holiday' | 'Resumption' | 'Meeting' | 
 
 export type AcademicTermType = '1st Term' | '2nd Term' | '3rd Term' | 'Annual';
 
-export type EventAudienceType = 'All Students' | 'Day Students' | 'Boarding Students' | 'JSS Only' | 'SS Only' | 'Parents & Guardians' | 'Staff';
+export type EventAudienceType = 'All Students' | 'Day Students' | 'JSS Only' | 'SS Only' | 'Parents & Guardians' | 'Staff';
 
 export interface AcademicCalendarEvent {
   id: string;

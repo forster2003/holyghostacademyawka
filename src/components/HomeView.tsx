@@ -675,7 +675,7 @@ export default function HomeView({ news, projects, setCurrentPage, milestoneStat
                 School Fees & Direct Bank Payment
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed max-w-xl">
-                Remit terminal tuition, boarding levies, entrance application forms, and project donations directly to the official <strong>Holy Ghost Academy</strong> corporate bank account at United Bank for Africa (UBA).
+                Remit terminal tuition, entrance application forms, and project donations directly to the official <strong>Holy Ghost Academy</strong> corporate bank account at United Bank for Africa (UBA).
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">

@@ -125,6 +125,7 @@ interface AdminViewProps {
   onUpdateAboutUsImage?: (image: string, badge?: string) => void;
   onResetAboutUsImage?: () => void;
   onNavigatePublicPage?: (page: string) => void;
+  onSyncCumulative?: () => void;
   initialActiveTab?: 'overview' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'seo';
   initialSearchQuery?: string;
   initialSelectedResultId?: string;
@@ -255,6 +256,7 @@ export default function AdminView({
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
   onDisconnectSupabase, onConnectSupabase,
   aboutUsImage, aboutUsBadge, onUpdateAboutUsImage, onResetAboutUsImage, onNavigatePublicPage,
+  onSyncCumulative,
   initialActiveTab, initialSearchQuery, initialSelectedResultId
 }: AdminViewProps) {
   
@@ -756,6 +758,8 @@ export default function AdminView({
   const [manualGrossTotalMarks, setManualGrossTotalMarks] = useState<number | undefined>(undefined);
   const [manualTerminalAverage, setManualTerminalAverage] = useState<number | undefined>(undefined);
   const [manualGradePoint, setManualGradePoint] = useState<number | undefined>(undefined);
+  const [manualPassFail, setManualPassFail] = useState<'Passed' | 'Failed' | ''>('');
+  const [passFailFilter, setPassFailFilter] = useState<'all' | 'passed' | 'failed'>('all');
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
   const [resultsDeskTab, setResultsDeskTab] = useState<'registrar' | 'cumulative' | 'attendance' | 'promotion' | 'sheet' | 'csv'>('registrar');
   const [selectedSheetStudentId, setSelectedSheetStudentId] = useState<string | null>(null);
@@ -1281,6 +1285,7 @@ export default function AdminView({
     setManualGrossTotalMarks(undefined);
     setManualTerminalAverage(undefined);
     setManualGradePoint(undefined);
+    setManualPassFail('');
     setSubjectScoresInput([
       { subject: 'Mathematics', ca1Score: 0, ca2Score: 0, testScore: 0, examScore: 0, totalScore: 0, grade: 'F', remarks: 'Requires remedial practice' }
     ]);
@@ -1307,6 +1312,7 @@ export default function AdminView({
     setManualGrossTotalMarks(res.grossTotalMarks);
     setManualTerminalAverage(res.terminalAverage);
     setManualGradePoint(res.gradePoint);
+    setManualPassFail((res.passFailStatus as any) || '');
 
     const parsedScores = res.subjectScores && res.subjectScores.length > 0
       ? res.subjectScores.map((s) => {
@@ -1370,6 +1376,13 @@ export default function AdminView({
     }
 
     const liveMetrics = computeAcademicMetrics(subjectScoresInput, { position: manualPos });
+    const passFailDecision = manualPassFail || liveMetrics.passFailStatus;
+
+    // Attach passFail to each individual subject score
+    const formattedScores = subjectScoresInput.map((s) => ({
+      ...s,
+      passFail: (s.totalScore ?? 0) >= 40 ? ('Pass' as const) : ('Failed' as const)
+    }));
 
     if (editingResultId) {
       const studentNameUpdated = manualStudentName.trim();
@@ -1386,7 +1399,7 @@ export default function AdminView({
           attendance: manualAttendance || "85 of 85 Days",
           principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
           teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
-          subjectScores: subjectScoresInput,
+          subjectScores: formattedScores,
           accessPassword: manualAccessPassword.trim() || undefined,
           passportPhoto: manualPassportPhoto.trim() || undefined,
           grossTotalMarks: manualGrossTotalMarks !== undefined ? manualGrossTotalMarks : liveMetrics.grossTotalMarks,
@@ -1394,14 +1407,15 @@ export default function AdminView({
           gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
           accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
           classStanding: manualClassStanding.trim() || liveMetrics.classStanding,
-          promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus
+          promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus,
+          passFailStatus: passFailDecision
         });
       }
       setEditingResultId(null);
       resetManualResultForm();
       setResultNotice({
         type: 'success',
-        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All academic metrics, promotion status, and passport photo are live on the student portal.`
+        message: `Published student result sheet for "${studentNameUpdated}" was successfully updated! All academic metrics, promotion status, pass/failed standing, and passport photo are live on the student portal.`
       });
       setTimeout(() => setResultNotice(null), 6000);
       return;
@@ -1420,7 +1434,7 @@ export default function AdminView({
       attendance: manualAttendance || "85 of 85 Days",
       principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
       teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
-      subjectScores: subjectScoresInput,
+      subjectScores: formattedScores,
       accessPassword: manualAccessPassword.trim() || undefined,
       passportPhoto: manualPassportPhoto.trim() || undefined,
       grossTotalMarks: manualGrossTotalMarks !== undefined ? manualGrossTotalMarks : liveMetrics.grossTotalMarks,
@@ -1428,14 +1442,15 @@ export default function AdminView({
       gradePoint: manualGradePoint !== undefined ? manualGradePoint : liveMetrics.gradePoint,
       accreditedGradeBracket: manualAccreditedGradeBracket.trim() || liveMetrics.accreditedGradeBracket,
       classStanding: manualClassStanding.trim() || liveMetrics.classStanding,
-      promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus
+      promotionStatus: manualPromotionStatus.trim() || liveMetrics.promotionStatus,
+      passFailStatus: passFailDecision
     };
 
     addResult(res);
     resetManualResultForm();
     setResultNotice({
       type: 'success',
-      message: `New student report card record for "${res.studentName}" has been successfully published with official passport photograph and academic metrics!`
+      message: `New student report card record for "${res.studentName}" has been successfully published with official passport photograph, academic metrics, and pass/failed standing!`
     });
     setTimeout(() => setResultNotice(null), 6000);
   };
@@ -4515,15 +4530,69 @@ export default function AdminView({
                   {/* Core Student Details Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student ID / Reg No *</label>
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student ID / Reg No *</label>
+                        {results.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const q = manualStudentId.trim().toLowerCase();
+                              if (!q) return;
+                              const match = results.find(r => 
+                                r.studentId.trim().toLowerCase() === q || 
+                                r.studentName.trim().toLowerCase() === q ||
+                                r.studentId.toLowerCase().includes(q)
+                              );
+                              if (match) {
+                                setManualStudentId(match.studentId);
+                                setManualStudentName(match.studentName);
+                                setManualClass(match.classLevel);
+                                if (match.gender) setManualGender(match.gender);
+                                if (match.rollNumber) setManualRollNo(match.rollNumber);
+                                if (match.passportPhoto) setManualPassportPhoto(match.passportPhoto);
+                                if (match.accessPassword) setManualAccessPassword(match.accessPassword);
+                              }
+                            }}
+                            className="text-[8.5px] text-brand-green font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+                            title="Auto-fill particulars for enrolled student"
+                          >
+                            <RefreshCw className="w-2.5 h-2.5" />
+                            <span>Auto-Fill</span>
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
+                        list="admin-enrolled-students-id-list"
                         placeholder="e.g. HGASS/2026/001"
                         value={manualStudentId}
-                        onChange={(e) => setManualStudentId(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setManualStudentId(val);
+                          // Auto match if exact ID found
+                          const match = results.find(r => r.studentId.toLowerCase() === val.trim().toLowerCase());
+                          if (match) {
+                            setManualStudentName(match.studentName);
+                            setManualClass(match.classLevel);
+                            if (match.gender) setManualGender(match.gender);
+                            if (match.rollNumber) setManualRollNo(match.rollNumber);
+                            if (match.passportPhoto) setManualPassportPhoto(match.passportPhoto);
+                            if (match.accessPassword) setManualAccessPassword(match.accessPassword);
+                          }
+                        }}
                         className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
                       />
+                      <datalist id="admin-enrolled-students-id-list">
+                        {Array.from(new Set(results.map(r => r.studentId))).map(sId => {
+                          const sMatch = results.find(r => r.studentId === sId);
+                          return (
+                            <option key={sId} value={sId}>
+                              {sMatch ? `${sMatch.studentName} (${sMatch.classLevel})` : sId}
+                            </option>
+                          );
+                        })}
+                      </datalist>
                     </div>
                     <div className="space-y-1 sm:col-span-2">
                       <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Student Full Name *</label>
@@ -4691,6 +4760,7 @@ export default function AdminView({
                               setManualAccreditedGradeBracket(currentLiveMetrics.accreditedGradeBracket);
                               setManualClassStanding(currentLiveMetrics.classStanding);
                               setManualPromotionStatus(currentLiveMetrics.promotionStatus);
+                              setManualPassFail(currentLiveMetrics.passFailStatus);
                             }}
                             className="px-2.5 py-1 bg-brand-green/10 hover:bg-brand-green/20 text-brand-green text-[10px] font-bold uppercase rounded flex items-center space-x-1 cursor-pointer transition self-start sm:self-auto"
                             title="Recalculate and fill with standard diocesan rubric"
@@ -4701,7 +4771,7 @@ export default function AdminView({
                         </div>
 
                         {/* Metrics Input Fields */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
                           {/* 1. Class Placement */}
                           <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
                             <label className="block text-[8.5px] font-bold text-slate-500 uppercase tracking-wide">
@@ -4793,6 +4863,34 @@ export default function AdminView({
                               className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-semibold text-xs text-slate-800"
                             />
                             <span className="text-[8px] text-slate-400 block font-mono truncate">{currentLiveMetrics.classStanding}</span>
+                          </div>
+
+                          {/* 7. Pass or Failed Standing */}
+                          <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-200">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[8.5px] font-bold text-slate-600 uppercase tracking-wide">
+                                Pass / Failed *
+                              </label>
+                              <span className={`px-1.5 py-0.2 rounded text-[7.5px] font-black uppercase tracking-wider ${
+                                (manualPassFail || currentLiveMetrics.passFailStatus).toLowerCase().includes('pass')
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-rose-100 text-rose-800'
+                              }`}>
+                                {manualPassFail || currentLiveMetrics.passFailStatus}
+                              </span>
+                            </div>
+                            <select
+                              value={manualPassFail || ''}
+                              onChange={(e) => setManualPassFail(e.target.value as any)}
+                              className="w-full px-2 py-1 bg-white border border-slate-200 rounded font-bold text-xs text-slate-800"
+                            >
+                              <option value="">Auto: {currentLiveMetrics.passFailStatus}</option>
+                              <option value="Passed">Passed</option>
+                              <option value="Failed">Failed</option>
+                            </select>
+                            <span className="text-[8px] text-slate-400 block font-mono truncate">
+                              Failed: {currentLiveMetrics.failedSubjectsCount} subj
+                            </span>
                           </div>
                         </div>
 
@@ -4955,8 +5053,13 @@ export default function AdminView({
                               </div>
                               <div className="sm:col-span-1 text-center">
                                 <span className="block text-[8px] font-bold text-slate-400 uppercase">Total (100)</span>
-                                <span className="font-mono font-black text-brand-green text-xs">
+                                <span className="font-mono font-black text-brand-green text-xs block">
                                   {total} <span className="text-[10px] text-slate-500">({row.grade})</span>
+                                </span>
+                                <span className={`inline-block px-1 py-0.2 rounded text-[7.5px] font-black uppercase tracking-wider ${
+                                  total >= 40 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {total >= 40 ? 'PASS' : 'FAILED'}
                                 </span>
                               </div>
                               <div className="sm:col-span-1 text-right">
@@ -5033,20 +5136,57 @@ export default function AdminView({
                         Click "Edit Result" on any student to modify their published scores, remarks, or assigned access PIN.
                       </p>
                     </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search by name, ID or class..."
-                        value={resultsSearchQuery}
-                        onChange={(e) => setResultsSearchQuery(e.target.value)}
-                        className="w-full sm:w-64 px-2.5 py-1 text-xs bg-white border border-slate-200 rounded focus:ring-1 focus:ring-brand-green/40 focus:outline-hidden"
-                      />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded border border-slate-200 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setPassFailFilter('all')}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                            passFailFilter === 'all' ? 'bg-brand-green text-white shadow-2xs' : 'text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          All ({results.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPassFailFilter('passed')}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                            passFailFilter === 'passed' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Passed
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPassFailFilter('failed')}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                            passFailFilter === 'failed' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Failed
+                        </button>
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search by name, ID or class..."
+                          value={resultsSearchQuery}
+                          onChange={(e) => setResultsSearchQuery(e.target.value)}
+                          className="w-full sm:w-60 px-2.5 py-1 text-xs bg-white border border-slate-200 rounded focus:ring-1 focus:ring-brand-green/40 focus:outline-hidden"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     {results
                       .filter((res) => {
+                        const studentPassFail = res.passFailStatus || ((res.terminalAverage ?? 0) >= 50 && !res.promotionStatus?.toLowerCase().includes('repeat') ? 'Passed' : 'Failed');
+                        if (passFailFilter === 'passed' && !studentPassFail.toLowerCase().includes('pass')) return false;
+                        if (passFailFilter === 'failed' && studentPassFail.toLowerCase().includes('pass')) return false;
+
                         if (!resultsSearchQuery.trim()) return true;
                         const q = resultsSearchQuery.toLowerCase();
                         return (
@@ -5054,11 +5194,15 @@ export default function AdminView({
                           res.studentId.toLowerCase().includes(q) ||
                           res.classLevel.toLowerCase().includes(q) ||
                           res.term.toLowerCase().includes(q) ||
-                          res.academicSession.toLowerCase().includes(q)
+                          res.academicSession.toLowerCase().includes(q) ||
+                          studentPassFail.toLowerCase().includes(q)
                         );
                       })
                       .map((res) => {
                         const isCurrentlyEditing = editingResultId === res.id;
+                        const studentPassFail = res.passFailStatus || ((res.terminalAverage ?? 0) >= 50 && !res.promotionStatus?.toLowerCase().includes('repeat') ? 'Passed' : 'Failed');
+                        const isPass = studentPassFail.toLowerCase().includes('pass');
+
                         return (
                           <div 
                             key={res.id} 
@@ -5081,6 +5225,12 @@ export default function AdminView({
                                     Public (No PIN)
                                   </span>
                                 )}
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${
+                                  isPass ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'
+                                }`}>
+                                  {isPass ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" /> : <X className="w-2.5 h-2.5 text-rose-700" />}
+                                  <span>{isPass ? 'PASSED' : 'FAILED'}</span>
+                                </span>
                                 {res.promotionStatus && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-900 border border-emerald-200">
                                     <GraduationCap className="w-2.5 h-2.5 text-emerald-700" />
@@ -5094,7 +5244,7 @@ export default function AdminView({
                                 )}
                               </div>
                               <p className="text-slate-400 mt-1.5 font-mono text-[10px]">
-                                ID: <span className="font-bold text-brand-oxblood">{res.studentId}</span>  |  Class: {res.classLevel}  |  Term: {res.term} ({res.academicSession})  |  Rank: {res.position}  |  Subjects: {res.subjectScores?.length || 0}
+                                ID: <span className="font-bold text-brand-oxblood">{res.studentId}</span>  |  Class: {res.classLevel}  |  Term: {res.term} ({res.academicSession})  |  Rank: {res.position}  |  Avg: <strong className="text-slate-700">{res.terminalAverage ?? '—'}%</strong>  |  Standing: <strong className={isPass ? 'text-emerald-700' : 'text-rose-700'}>{studentPassFail}</strong>  |  Subjects: {res.subjectScores?.length || 0}
                               </p>
                             </div>
 
@@ -5139,6 +5289,10 @@ export default function AdminView({
                       })}
 
                     {results.length > 0 && results.filter((res) => {
+                      const studentPassFail = res.passFailStatus || ((res.terminalAverage ?? 0) >= 50 && !res.promotionStatus?.toLowerCase().includes('repeat') ? 'Passed' : 'Failed');
+                      if (passFailFilter === 'passed' && !studentPassFail.toLowerCase().includes('pass')) return false;
+                      if (passFailFilter === 'failed' && studentPassFail.toLowerCase().includes('pass')) return false;
+
                       if (!resultsSearchQuery.trim()) return true;
                       const q = resultsSearchQuery.toLowerCase();
                       return (
@@ -5146,11 +5300,12 @@ export default function AdminView({
                         res.studentId.toLowerCase().includes(q) ||
                         res.classLevel.toLowerCase().includes(q) ||
                         res.term.toLowerCase().includes(q) ||
-                        res.academicSession.toLowerCase().includes(q)
+                        res.academicSession.toLowerCase().includes(q) ||
+                        studentPassFail.toLowerCase().includes(q)
                       );
                     }).length === 0 && (
                       <div className="p-6 bg-white border border-slate-200 rounded text-center text-xs text-slate-400">
-                        No published student results match your search "{resultsSearchQuery}".
+                        No published student results match your filter and search "{resultsSearchQuery}".
                       </div>
                     )}
                   </div>
@@ -5174,6 +5329,7 @@ export default function AdminView({
                     });
                   }}
                   onSwitchToTerminalRegistrar={() => setResultsDeskTab('registrar')}
+                  onSyncCumulative={onSyncCumulative}
                 />
               </div>
             )}
@@ -5486,7 +5642,7 @@ export default function AdminView({
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-0.5">
                   <h3 className="text-base font-black font-heading text-brand-green uppercase tracking-tight">Parent & Public Contact Inbox</h3>
-                  <p className="text-[11px] text-slate-400">View direct messages, inquiries regarding boarding, admissions, or alumni collaborations.</p>
+                  <p className="text-[11px] text-slate-400">View direct messages, inquiries regarding admissions, academics, or alumni collaborations.</p>
                 </div>
 
                 <div className="space-y-3">

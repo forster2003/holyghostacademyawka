@@ -107,6 +107,7 @@ export function mapFromDb(table: string, row: any): any {
     if (row.grade_point !== null && row.grade_point !== undefined) mapped.gradePoint = Number(row.grade_point);
     if (row.accredited_grade_bracket) mapped.accreditedGradeBracket = row.accredited_grade_bracket;
     if (row.class_standing) mapped.classStanding = row.class_standing;
+    if (row.pass_fail_status) mapped.passFailStatus = row.pass_fail_status;
 
     delete mapped.student_id;
     delete mapped.student_name;
@@ -124,6 +125,7 @@ export function mapFromDb(table: string, row: any): any {
     delete mapped.grade_point;
     delete mapped.accredited_grade_bracket;
     delete mapped.class_standing;
+    delete mapped.pass_fail_status;
   } else if (table === 'hero_slides') {
     mapped.imageUrl = row.image_url;
     mapped.order = row.slide_order ?? 0;
@@ -242,6 +244,7 @@ export function mapToDb(table: string, item: any): any {
     mapped.grade_point = item.gradePoint !== undefined && item.gradePoint !== null ? item.gradePoint : null;
     mapped.accredited_grade_bracket = item.accreditedGradeBracket || null;
     mapped.class_standing = item.classStanding || null;
+    mapped.pass_fail_status = item.passFailStatus || null;
 
     delete mapped.studentId;
     delete mapped.studentName;
@@ -259,6 +262,7 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.gradePoint;
     delete mapped.accreditedGradeBracket;
     delete mapped.classStanding;
+    delete mapped.passFailStatus;
   } else if (table === 'hero_slides') {
     mapped.image_url = item.imageUrl;
     mapped.slide_order = item.order ?? 0;

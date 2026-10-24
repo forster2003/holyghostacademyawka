@@ -97,7 +97,7 @@ export const PAGE_SEO_MAP: Record<string, PageSeoConfig> = {
   },
   projects: {
     title: 'Campus Infrastructure & Development Projects | Holy Ghost Academy, Awka',
-    description: 'Track ongoing structural investments including modern chemistry laboratories, digital ICT suites, sports arenas, and boarding facilities at HGASS.',
+    description: 'Track ongoing structural investments including modern chemistry laboratories, digital ICT suites, sports arenas, and academic learning facilities at HGASS.',
     slug: 'projects',
     breadcrumbs: [
       { name: 'Home', item: `${BASE_SITE_URL}/` },

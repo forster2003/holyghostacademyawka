@@ -323,7 +323,7 @@ create table if not exists public.calendar_events (
   term text not null check (term in ('1st Term', '2nd Term', '3rd Term', 'Annual')),
   academic_session text not null default '2026/2027',
   description text,
-  target_audience text not null default 'All Students' check (target_audience in ('All Students', 'Day Students', 'Boarding Students', 'JSS Only', 'SS Only', 'Parents & Guardians', 'Staff')),
+  target_audience text not null default 'All Students' check (target_audience in ('All Students', 'Day Students', 'JSS Only', 'SS Only', 'Parents & Guardians', 'Staff')),
   location text default 'Academy Campus',
   is_highlight boolean not null default false,
   is_important boolean not null default false,

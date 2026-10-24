@@ -28,6 +28,7 @@ interface CumulativeResultsSectionProps {
   onEditResult?: (id: string, fields: Partial<StudentResult>) => void;
   onDeleteResult: (id: string) => void;
   onSwitchToTerminalRegistrar?: () => void;
+  onSyncCumulative?: () => void;
 }
 
 export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> = ({
@@ -35,7 +36,8 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   onAddResult,
   onEditResult,
   onDeleteResult,
-  onSwitchToTerminalRegistrar
+  onSwitchToTerminalRegistrar,
+  onSyncCumulative
 }) => {
   // Navigation inside Cumulative Desk
   const [activeTab, setActiveTab] = useState<'input' | 'registry'>('input');
@@ -44,6 +46,15 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
   const [formSuccessMessage, setFormSuccessMessage] = useState<string>('');
   const [formErrorMessage, setFormErrorMessage] = useState<string>('');
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleTriggerSync = () => {
+    if (onSyncCumulative) {
+      onSyncCumulative();
+      setSyncFeedback('All termly records have been re-compiled and synchronized into cumulative records successfully!');
+      setTimeout(() => setSyncFeedback(null), 4000);
+    }
+  };
 
   // Selected student from existing records for quick auto-fill
   const [selectedStudentForAutofill, setSelectedStudentForAutofill] = useState<string>('');
@@ -274,7 +285,7 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   // Remove a subject row
   const handleRemoveSubjectRow = (index: number) => {
     if (subjectRows.length <= 1) {
-      alert('At least one subject is required for an academic result.');
+      setFormErrorMessage('At least one subject is required for an academic result.');
       return;
     }
     setSubjectRows((prev) => prev.filter((_, i) => i !== index));
@@ -306,65 +317,151 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   };
 
   // Auto-Pull from existing 1st, 2nd, and 3rd term terminal results
+  // Auto-Pull from existing 1st, 2nd, and 3rd term terminal results
   const handleAutoPullFromTerminalRecords = (targetStudentId?: string) => {
-    const sId = (targetStudentId || studentId).trim().toUpperCase();
-    if (!sId) {
-      alert('Please enter or select a Student ID / Reg No first.');
+    // 1. Resolve query: parameter, selectedStudentForAutofill, studentId, or studentName
+    let query = (targetStudentId || selectedStudentForAutofill || studentId || studentName || '').trim();
+
+    // If nothing provided at all, but we have registered students, default to the first one
+    if (!query && existingStudents.length > 0) {
+      query = existingStudents[0].studentId;
+    }
+
+    if (!query) {
+      setFormErrorMessage('Please select a student from the Quick Selector dropdown or type their Student ID / Name below first.');
       return;
     }
 
-    // Find all terminal records matching this student and session
-    const matchingRecords = results.filter(
+    // 2. Find matching student record from results (by ID, Name, or partial match)
+    const qLower = query.toLowerCase();
+    const matchedStudent = results.find((r) => 
+      r.studentId.trim().toLowerCase() === qLower ||
+      r.studentName.trim().toLowerCase() === qLower ||
+      r.studentId.toLowerCase().includes(qLower) ||
+      r.studentName.toLowerCase().includes(qLower)
+    );
+
+    if (!matchedStudent) {
+      setFormErrorMessage(`No registered student results found matching "${query}". Please select an enrolled student from the dropdown.`);
+      return;
+    }
+
+    const targetId = matchedStudent.studentId.trim().toUpperCase();
+
+    // Auto-fill student metadata
+    setStudentId(matchedStudent.studentId);
+    setStudentName(matchedStudent.studentName);
+    setClassLevel(matchedStudent.classLevel);
+    if (matchedStudent.gender) setGender(matchedStudent.gender);
+    if (matchedStudent.rollNumber) setRollNumber(matchedStudent.rollNumber);
+    if (matchedStudent.passportPhoto) setPassportPhoto(matchedStudent.passportPhoto);
+    if (matchedStudent.accessPassword) setAccessPassword(matchedStudent.accessPassword);
+    setSelectedStudentForAutofill(matchedStudent.studentId);
+
+    // 3. Find all termly records for this student
+    // First try matching records in the current session
+    let matchingRecords = results.filter(
       (r) =>
-        r.studentId.trim().toUpperCase() === sId &&
+        r.studentId.trim().toUpperCase() === targetId &&
         r.academicSession.trim() === academicSession.trim() &&
         r.term !== 'Annual Cumulative' &&
         !r.isCumulative
     );
 
+    // If no records in this session, search across any session for this student
     if (matchingRecords.length === 0) {
-      alert(
-        `No terminal records found for student ${sId} in session ${academicSession}.\nYou can still input the cumulative scores manually below.`
+      matchingRecords = results.filter(
+        (r) =>
+          r.studentId.trim().toUpperCase() === targetId &&
+          r.term !== 'Annual Cumulative' &&
+          !r.isCumulative
+      );
+      if (matchingRecords.length > 0 && matchingRecords[0].academicSession) {
+        setAcademicSession(matchingRecords[0].academicSession);
+      }
+    }
+
+    // If still no non-cumulative records found, check if a cumulative record already exists
+    let existingCumRecord: StudentResult | undefined = undefined;
+    if (matchingRecords.length === 0) {
+      existingCumRecord = results.find(
+        (r) =>
+          r.studentId.trim().toUpperCase() === targetId &&
+          (r.isCumulative || r.term === 'Annual Cumulative')
+      );
+    }
+
+    if (matchingRecords.length === 0 && !existingCumRecord) {
+      setFormErrorMessage(
+        `No terminal results found for ${matchedStudent.studentName} (${targetId}). You can input their termly scores manually below.`
       );
       return;
     }
 
-    // Auto-fill student metadata if not already filled
-    const firstRecord = matchingRecords[0];
-    if (!studentName) setStudentName(firstRecord.studentName);
-    if (!classLevel) setClassLevel(firstRecord.classLevel);
-    if (firstRecord.gender) setGender(firstRecord.gender);
-    if (firstRecord.rollNumber) setRollNumber(firstRecord.rollNumber);
-    if (firstRecord.passportPhoto && !passportPhoto) setPassportPhoto(firstRecord.passportPhoto);
-    if (firstRecord.accessPassword && !accessPassword) setAccessPassword(firstRecord.accessPassword);
+    // Helper functions for detecting terms across variations
+    const isTerm1 = (termStr?: string) => {
+      const t = (termStr || '').toLowerCase();
+      return t.includes('1st') || t.includes('first') || t.includes('term 1') || t.includes('term1');
+    };
+    const isTerm2 = (termStr?: string) => {
+      const t = (termStr || '').toLowerCase();
+      return t.includes('2nd') || t.includes('second') || t.includes('term 2') || t.includes('term2');
+    };
+    const isTerm3 = (termStr?: string) => {
+      const t = (termStr || '').toLowerCase();
+      return t.includes('3rd') || t.includes('third') || t.includes('term 3') || t.includes('term3');
+    };
 
-    // Group subjects across 1st Term, 2nd Term, 3rd Term
-    const term1Record = matchingRecords.find((r) => r.term.includes('1st'));
-    const term2Record = matchingRecords.find((r) => r.term.includes('2nd'));
-    const term3Record = matchingRecords.find((r) => r.term.includes('3rd'));
+    // Gather all distinct subjects across 1st, 2nd, and 3rd term records
+    const subjectMap = new Map<string, { term1?: number; term2?: number; term3?: number; remarks?: string }>();
 
-    // Gather all distinct subjects
-    const subjectMap = new Map<string, { term1?: number; term2?: number; term3?: number }>();
+    if (matchingRecords.length > 0) {
+      matchingRecords.forEach((rec) => {
+        rec.subjectScores?.forEach((sub) => {
+          const key = sub.subject.trim();
+          if (!key) return;
+          if (!subjectMap.has(key)) {
+            subjectMap.set(key, {});
+          }
+          const entry = subjectMap.get(key)!;
+          const score = sub.totalScore !== undefined && sub.totalScore > 0
+            ? sub.totalScore
+            : ((sub.testScore || 0) + (sub.examScore || 0));
 
-    matchingRecords.forEach((rec) => {
-      rec.subjectScores?.forEach((sub) => {
-        const key = sub.subject.trim();
-        if (!subjectMap.has(key)) {
-          subjectMap.set(key, {});
-        }
-        const entry = subjectMap.get(key)!;
-        if (rec.term.includes('1st')) entry.term1 = sub.totalScore;
-        else if (rec.term.includes('2nd')) entry.term2 = sub.totalScore;
-        else if (rec.term.includes('3rd')) entry.term3 = sub.totalScore;
+          if (isTerm1(rec.term)) {
+            entry.term1 = score;
+          } else if (isTerm2(rec.term)) {
+            entry.term2 = score;
+          } else if (isTerm3(rec.term)) {
+            entry.term3 = score;
+          }
+          if (sub.remarks && !entry.remarks) {
+            entry.remarks = sub.remarks;
+          }
+        });
       });
-    });
+    } else if (existingCumRecord && existingCumRecord.subjectScores) {
+      existingCumRecord.subjectScores.forEach((sub) => {
+        const key = sub.subject.trim();
+        if (!key) return;
+        subjectMap.set(key, {
+          term1: sub.term1Score,
+          term2: sub.term2Score,
+          term3: sub.term3Score,
+          remarks: sub.remarks
+        });
+      });
+      if (existingCumRecord.academicSession) {
+        setAcademicSession(existingCumRecord.academicSession);
+      }
+    }
 
     if (subjectMap.size === 0) {
-      alert('Terminal records were found, but no subject scores were registered inside them.');
+      setFormErrorMessage(`Found records for ${matchedStudent.studentName}, but no subject scores were found inside.`);
       return;
     }
 
-    // Construct compiled subject rows
+    // Construct compiled subject rows with multi-term weighted averages
     const compiledRows: SubjectScore[] = Array.from(subjectMap.entries()).map(([subjName, scores]) => {
       const metrics = computeCumulativeSubjectMetrics(scores.term1, scores.term2, scores.term3);
       return {
@@ -379,41 +476,41 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
         examScore: Math.round(metrics.cumulativeAverage * 0.6),
         totalScore: metrics.cumulativeAverage,
         grade: metrics.grade,
-        remarks: metrics.remark
+        remarks: scores.remarks || metrics.remark
       };
     });
 
     setSubjectRows(compiledRows);
 
-    // Calculate term averages if available
-    const t1Avg = term1Record ? computeSessionCumulativeMetrics(term1Record.subjectScores).sessionAverage : undefined;
-    const t2Avg = term2Record ? computeSessionCumulativeMetrics(term2Record.subjectScores).sessionAverage : undefined;
-    const t3Avg = term3Record ? computeSessionCumulativeMetrics(term3Record.subjectScores).sessionAverage : undefined;
+    // Auto-calculate and populate all session summary metrics
+    const evaluated = computeSessionCumulativeMetrics(compiledRows, {
+      classLevel: matchedStudent.classLevel || classLevel,
+      position: matchedStudent.position || position,
+      promotionStatus: matchedStudent.promotionStatus || promotionStatus,
+      accreditedGradeBracket: matchedStudent.accreditedGradeBracket || accreditedGradeBracket,
+      classStanding: matchedStudent.classStanding || classStanding
+    });
 
+    setGrossTotalMarks(evaluated.sessionGrossTotal);
+    setTerminalAverage(evaluated.sessionAverage);
+    setGradePoint(evaluated.gradePoint);
+    setAccreditedGradeBracket(evaluated.accreditedGradeBracket);
+    setClassStanding(evaluated.classStanding);
+    setPromotionStatus(evaluated.promotionStatus);
+
+    setFormErrorMessage('');
+    const termCount = matchingRecords.length > 0 ? `${matchingRecords.length} termly report sheet(s)` : 'existing cumulative session record';
     setFormSuccessMessage(
-      `Successfully aggregated scores from ${matchingRecords.length} termly report sheet(s) for ${firstRecord.studentName}!`
+      `✓ Successfully auto-pulled & aggregated ${compiledRows.length} subject(s) from ${termCount} for ${matchedStudent.studentName} (${targetId})!`
     );
-    setTimeout(() => setFormSuccessMessage(''), 5000);
+    setTimeout(() => setFormSuccessMessage(''), 6000);
   };
 
   // Select existing student handler
   const handleSelectExistingStudent = (sId: string) => {
     setSelectedStudentForAutofill(sId);
     if (!sId) return;
-
-    const matched = results.find((r) => r.studentId === sId);
-    if (matched) {
-      setStudentId(matched.studentId);
-      setStudentName(matched.studentName);
-      setClassLevel(matched.classLevel);
-      if (matched.gender) setGender(matched.gender);
-      if (matched.rollNumber) setRollNumber(matched.rollNumber);
-      if (matched.passportPhoto) setPassportPhoto(matched.passportPhoto);
-      if (matched.accessPassword) setAccessPassword(matched.accessPassword);
-
-      // Offer auto-pull
-      handleAutoPullFromTerminalRecords(matched.studentId);
-    }
+    handleAutoPullFromTerminalRecords(sId);
   };
 
   // Sync metrics from live calculations
@@ -663,6 +760,45 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
         </div>
       </div>
 
+      {/* Auto-Link Real-Time Sync Indicator Banner */}
+      <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="p-2 rounded-lg bg-emerald-700 text-white shrink-0 mt-0.5 sm:mt-0 shadow-xs">
+            <Sparkles className="w-4 h-4 text-brand-yellow" />
+          </div>
+          <div>
+            <div className="font-heading font-black text-xs text-emerald-950 uppercase tracking-tight flex flex-wrap items-center gap-2">
+              <span>Automatically Linked to Grade Book Registrar</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-950 text-[9px] font-black uppercase tracking-wider">
+                Real-Time Auto Sync Active
+              </span>
+            </div>
+            <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+              Once a termly result (1st, 2nd, or 3rd Term) of a student is inputted or edited in the Academic Grade Book Registrar, it automatically registers and updates here in the Cumulative Results section with full multi-term weighted averages.
+            </p>
+          </div>
+        </div>
+
+        {onSyncCumulative && (
+          <button
+            type="button"
+            onClick={handleTriggerSync}
+            className="px-3.5 py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto shadow-xs border border-emerald-700"
+            title="Re-compile all student terminal results into annual cumulative records"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Re-Sync All From Grade Book</span>
+          </button>
+        )}
+      </div>
+
+      {syncFeedback && (
+        <div className="p-3 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-2 animate-fade-in shadow-2xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
+
       {/* Success / Error Banners */}
       {formSuccessMessage && (
         <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 p-3.5 rounded-lg flex items-center justify-between text-xs font-bold animate-fade-in shadow-2xs">
@@ -778,8 +914,8 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
 
               <button
                 type="button"
-                onClick={() => handleAutoPullFromTerminalRecords()}
-                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold uppercase transition cursor-pointer flex items-center space-x-1 shadow-2xs"
+                onClick={() => handleAutoPullFromTerminalRecords(selectedStudentForAutofill || studentId)}
+                className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5 shadow-xs"
                 title="Search existing 1st, 2nd, and 3rd term results and aggregate them automatically"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -844,9 +980,20 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
             <div className="lg:col-span-9 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">
-                    Student ID / Reg No *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">
+                      Student ID / Reg No *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleAutoPullFromTerminalRecords(studentId || selectedStudentForAutofill)}
+                      className="text-[9px] text-brand-green hover:underline font-bold uppercase flex items-center gap-1 cursor-pointer"
+                      title="Auto-pull scores for this Student ID"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>Auto-Pull</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
@@ -1565,6 +1712,22 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
                           🎓 {rec.promotionStatus}
                         </span>
                       )}
+                      {(() => {
+                        const isPass = rec.passFailStatus
+                          ? rec.passFailStatus.toLowerCase().includes('pass')
+                          : ((rec.terminalAverage ?? rec.cumulativeSessionAverage ?? 0) >= 50 && !rec.promotionStatus?.toLowerCase().includes('repeat'));
+                        return isPass ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                            <span>PASSED</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-bold bg-rose-100 text-rose-900 border border-rose-300">
+                            <X className="w-3 h-3 text-rose-700" />
+                            <span>FAILED</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 

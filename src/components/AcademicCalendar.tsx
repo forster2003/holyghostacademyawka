@@ -541,7 +541,7 @@ export default function AcademicCalendar({
             <h4 className="text-xl font-black text-brand-green font-heading">{stats.resumptions}</h4>
             <Flag className="w-4 h-4 text-brand-green" />
           </div>
-          <span className="text-[10px] text-emerald-600 font-sans mt-0.5 block">Boarding & day return</span>
+          <span className="text-[10px] text-emerald-600 font-sans mt-0.5 block">Termly school return</span>
         </div>
 
         <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-brand-oxblood to-red-950 text-white p-3.5 rounded-lg shadow-2xs flex flex-col justify-between">
@@ -640,7 +640,6 @@ export default function AcademicCalendar({
             >
               <option value="ALL">All Audiences</option>
               <option value="All Students">All Students</option>
-              <option value="Boarding Students">Boarding Students Only</option>
               <option value="Day Students">Day Students Only</option>
               <option value="SS Only">Senior Secondary (SS Only)</option>
               <option value="JSS Only">Junior Secondary (JSS Only)</option>
@@ -815,7 +814,7 @@ export default function AcademicCalendar({
         </p>
         <p>
           Event dates are published by the Academic Board under the auspices of the Catholic Diocese of Awka. 
-          Boarding students must report on resumption days before 5:00 PM with evidence of full fee settlement. 
+          All students must report on resumption days before 8:00 AM with evidence of full fee settlement. 
           Official WAEC and NECO dates remain subject to external examining council guidelines.
         </p>
       </div>
@@ -957,7 +956,6 @@ export default function AcademicCalendar({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-brand-green focus:bg-white focus:outline-hidden cursor-pointer"
                   >
                     <option value="All Students">All Students</option>
-                    <option value="Boarding Students">Boarding Students Only</option>
                     <option value="Day Students">Day Students Only</option>
                     <option value="SS Only">Senior Secondary (SS Only)</option>
                     <option value="JSS Only">Junior Secondary (JSS Only)</option>

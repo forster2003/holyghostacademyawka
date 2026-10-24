@@ -131,10 +131,8 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
   // Quick Amount preset chips
   const amountPresets = [
     { label: 'Admission Form (₦10,000)', val: 10000, purp: 'Admission & Application Form' },
-    { label: 'JSS Tuition (₦65,000)', val: 65000, purp: 'School Fees / Tuition' },
-    { label: 'SS Tuition (₦75,000)', val: 75000, purp: 'School Fees / Tuition' },
-    { label: 'JSS Boarding (₦145,000)', val: 145000, purp: 'Boarding & Hostel Fees' },
-    { label: 'SS Boarding (₦165,000)', val: 165000, purp: 'Boarding & Hostel Fees' },
+    { label: 'JSS Tuition (₦35,000)', val: 35000, purp: 'School Fees / Tuition' },
+    { label: 'SS Tuition (₦35,000)', val: 35000, purp: 'School Fees / Tuition' },
     { label: 'PTA Levy (₦5,000)', val: 5000, purp: 'PTA Levy' },
     { label: 'Lab Upgrade Fund (₦20,000)', val: 20000, purp: 'Diocesan Project Donation' },
   ];
@@ -249,7 +247,7 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                   </h4>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Parents, guardians, prospective applicants, and well-wishers can make tuition, boarding, admission, or project payments directly using online banking apps, bank branch tellers, or USSD codes into the designated <strong>UBA Corporate Account: 1027146728 (Holy Ghost Academy)</strong>.
+                  Parents, guardians, prospective applicants, and well-wishers can make tuition, admission, or project payments directly using online banking apps, bank branch tellers, or USSD codes into the designated <strong>UBA Corporate Account: 1027146728 (Holy Ghost Academy)</strong>.
                 </p>
               </div>
 
@@ -627,7 +625,6 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                           className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:ring-1 focus:ring-brand-green focus:outline-hidden"
                         >
                           <option value="School Fees / Tuition">School Fees / Tuition</option>
-                          <option value="Boarding & Hostel Fees">Boarding & Hostel Maintenance</option>
                           <option value="Admission & Application Form">Admission & Application Form</option>
                           <option value="PTA Levy">PTA Levy & Development Dues</option>
                           <option value="Uniform & Textbooks">School Uniform & Books</option>
@@ -795,40 +792,29 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-heading uppercase text-[10px]">
                         <th className="py-2.5 px-3">Item Description</th>
-                        <th className="py-2.5 px-3">Day Students</th>
-                        <th className="py-2.5 px-3">Boarding Students</th>
+                        <th className="py-2.5 px-3">Termly Amount (₦)</th>
                         <th className="py-2.5 px-3">Frequency</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       <tr>
-                        <td className="py-3 px-3 font-semibold text-slate-800">Tuition & Academic Instructional Fee</td>
-                        <td className="py-3 px-3 font-mono">₦65,000</td>
-                        <td className="py-3 px-3 font-mono">₦65,000</td>
-                        <td className="py-3 px-3 text-slate-500">Per Term</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-semibold text-slate-800">Boarding, Hostel Accommodation & 3-Square Feeding</td>
-                        <td className="py-3 px-3 text-slate-400">N/A</td>
-                        <td className="py-3 px-3 font-mono">₦80,000</td>
+                        <td className="py-3 px-3 font-semibold text-slate-800">Junior Secondary Tuition & Academic Instructional Fee</td>
+                        <td className="py-3 px-3 font-mono font-bold text-brand-oxblood">₦35,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-semibold text-slate-800">ICT, Computer Laboratory & Internet Access</td>
-                        <td className="py-3 px-3 font-mono">₦5,000</td>
                         <td className="py-3 px-3 font-mono">₦5,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-semibold text-slate-800">PTA Development Levy & Medical Retainership</td>
                         <td className="py-3 px-3 font-mono">₦5,000</td>
-                        <td className="py-3 px-3 font-mono">₦5,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr className="bg-brand-green/5 font-bold text-brand-green">
-                        <td className="py-3 px-3 uppercase">Total Termly Remittance</td>
-                        <td className="py-3 px-3 font-mono text-sm">₦75,000</td>
-                        <td className="py-3 px-3 font-mono text-sm">₦155,000</td>
+                        <td className="py-3 px-3 uppercase">Total Termly School Fees (JSS 1 - JSS 3)</td>
+                        <td className="py-3 px-3 font-mono text-sm font-black">₦45,000</td>
                         <td className="py-3 px-3 uppercase text-[10px]">Total Per Term</td>
                       </tr>
                     </tbody>
@@ -843,40 +829,29 @@ export default function PaymentView({ payments, onAddPayment }: PaymentViewProps
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-heading uppercase text-[10px]">
                         <th className="py-2.5 px-3">Item Description</th>
-                        <th className="py-2.5 px-3">Day Students</th>
-                        <th className="py-2.5 px-3">Boarding Students</th>
+                        <th className="py-2.5 px-3">Termly Amount (₦)</th>
                         <th className="py-2.5 px-3">Frequency</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       <tr>
                         <td className="py-3 px-3 font-semibold text-slate-800">Senior Secondary Tuition & Teaching Fee</td>
-                        <td className="py-3 px-3 font-mono">₦75,000</td>
-                        <td className="py-3 px-3 font-mono">₦75,000</td>
-                        <td className="py-3 px-3 text-slate-500">Per Term</td>
-                      </tr>
-                      <tr>
-                        <td className="py-3 px-3 font-semibold text-slate-800">Boarding, Hostel Accommodation & 3-Square Feeding</td>
-                        <td className="py-3 px-3 text-slate-400">N/A</td>
-                        <td className="py-3 px-3 font-mono">₦90,000</td>
+                        <td className="py-3 px-3 font-mono font-bold text-brand-oxblood">₦35,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-semibold text-slate-800">Physics, Chemistry, Biology Practical & ICT Labs</td>
-                        <td className="py-3 px-3 font-mono">₦10,000</td>
                         <td className="py-3 px-3 font-mono">₦10,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr>
                         <td className="py-3 px-3 font-semibold text-slate-800">PTA Development Levy & Medical Retainership</td>
                         <td className="py-3 px-3 font-mono">₦5,000</td>
-                        <td className="py-3 px-3 font-mono">₦5,000</td>
                         <td className="py-3 px-3 text-slate-500">Per Term</td>
                       </tr>
                       <tr className="bg-brand-green/5 font-bold text-brand-green">
-                        <td className="py-3 px-3 uppercase">Total Termly Remittance</td>
-                        <td className="py-3 px-3 font-mono text-sm">₦90,000</td>
-                        <td className="py-3 px-3 font-mono text-sm">₦180,000</td>
+                        <td className="py-3 px-3 uppercase">Total Termly School Fees (SS 1 - SS 3)</td>
+                        <td className="py-3 px-3 font-mono text-sm font-black">₦50,000</td>
                         <td className="py-3 px-3 uppercase text-[10px]">Total Per Term</td>
                       </tr>
                     </tbody>
