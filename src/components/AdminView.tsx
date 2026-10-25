@@ -5600,6 +5600,7 @@ export default function AdminView({
                     setActiveTab('results');
                     setResultsDeskTab('registrar');
                   }}
+                  onSyncCumulative={onSyncCumulative}
                 />
               </div>
             )}

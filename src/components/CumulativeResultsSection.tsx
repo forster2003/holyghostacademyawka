@@ -3,7 +3,7 @@ import {
   Award, BookOpen, Calculator, Calendar, Camera, Check, CheckCircle2, 
   Copy, Download, Edit, Eye, FileSpreadsheet, FileText, GraduationCap, 
   Key, Plus, Printer, RefreshCw, Search, ShieldCheck, Sparkles, 
-  Trash, User, Users, X, ChevronRight, AlertCircle, ArrowUpRight
+  Trash, User, Users, X, ChevronRight, AlertCircle, ArrowUpRight, ArrowRight
 } from 'lucide-react';
 import { StudentResult, SubjectScore } from '../types';
 import { 
@@ -12,6 +12,7 @@ import {
   getGradeFromScore, 
   getNextClassLevel, 
   getSubjectAssessmentRemark, 
+  getPassFailStatus,
   STANDARD_JUNIOR_SUBJECTS, 
   STANDARD_SENIOR_SUBJECTS, 
   STANDARD_PROMOTION_STATUS_OPTIONS, 
@@ -46,6 +47,8 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
   const [formSuccessMessage, setFormSuccessMessage] = useState<string>('');
   const [formErrorMessage, setFormErrorMessage] = useState<string>('');
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [lastPublishedRecord, setLastPublishedRecord] = useState<StudentResult | null>(null);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleTriggerSync = () => {
@@ -583,88 +586,124 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   };
 
   // Form Submit: Save or Update Cumulative Record
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     setFormErrorMessage('');
     setFormSuccessMessage('');
+    setIsPublishing(true);
 
-    if (!studentId.trim() || !studentName.trim()) {
-      setFormErrorMessage('Please provide both the Student ID and Full Name.');
-      return;
-    }
+    try {
+      const cleanStudentId = studentId.trim().toUpperCase();
+      const cleanStudentName = studentName.trim();
+      const cleanSession = academicSession.trim() || '2025/2026';
 
-    if (subjectRows.length === 0) {
-      setFormErrorMessage('Please add at least one subject to this cumulative record.');
-      return;
-    }
+      if (!cleanStudentId || !cleanStudentName) {
+        setFormErrorMessage('Please provide both the Student ID / Reg No and Student Full Name before publishing.');
+        setIsPublishing(false);
+        return;
+      }
 
-    // Format subjects
-    const formattedSubjects: SubjectScore[] = subjectRows.map((row) => {
-      const metrics = computeCumulativeSubjectMetrics(row.term1Score, row.term2Score, row.term3Score);
-      return {
-        subject: row.subject.trim() || 'General Studies',
-        term1Score: row.term1Score ?? 0,
-        term2Score: row.term2Score ?? 0,
-        term3Score: row.term3Score ?? 0,
-        cumulativeTotal: metrics.cumulativeTotal,
-        cumulativeAverage: metrics.cumulativeAverage,
-        cumulativeGrade: metrics.grade,
-        testScore: Math.round(metrics.cumulativeAverage * 0.4),
-        examScore: Math.round(metrics.cumulativeAverage * 0.6),
-        totalScore: metrics.cumulativeAverage,
-        grade: metrics.grade,
-        remarks: row.remarks || metrics.remark,
-        subjectPosition: row.subjectPosition
+      // Filter out empty rows
+      const validRows = subjectRows.filter((r) => r.subject.trim() || r.term1Score || r.term2Score || r.term3Score);
+      if (validRows.length === 0) {
+        setFormErrorMessage('Please add at least one subject with evaluation scores, or click "+ Senior Subjects" / "+ Junior Subjects" above.');
+        setIsPublishing(false);
+        return;
+      }
+
+      // Format subjects
+      const formattedSubjects: SubjectScore[] = validRows.map((row) => {
+        const metrics = computeCumulativeSubjectMetrics(row.term1Score, row.term2Score, row.term3Score);
+        return {
+          subject: row.subject.trim() || 'General Studies',
+          term1Score: row.term1Score ?? 0,
+          term2Score: row.term2Score ?? 0,
+          term3Score: row.term3Score ?? 0,
+          cumulativeTotal: metrics.cumulativeTotal,
+          cumulativeAverage: metrics.cumulativeAverage,
+          cumulativeGrade: metrics.grade,
+          testScore: Math.round(metrics.cumulativeAverage * 0.4),
+          examScore: Math.round(metrics.cumulativeAverage * 0.6),
+          totalScore: metrics.cumulativeAverage,
+          grade: metrics.grade,
+          remarks: row.remarks || metrics.remark,
+          subjectPosition: row.subjectPosition,
+          passFail: metrics.cumulativeAverage >= 40 ? ('Pass' as const) : ('Failed' as const)
+        };
+      });
+
+      const evaluated = computeSessionCumulativeMetrics(formattedSubjects, {
+        classLevel,
+        position,
+        promotionStatus: promotionStatus || undefined,
+        accreditedGradeBracket: accreditedGradeBracket || undefined,
+        classStanding: classStanding || undefined
+      });
+
+      // Compute passFailStatus
+      const failedCount = formattedSubjects.filter(s => (s.cumulativeAverage || 0) < 40).length;
+      const finalAverage = terminalAverage !== undefined ? terminalAverage : evaluated.sessionAverage;
+      const finalPromotion = promotionStatus.trim() || evaluated.promotionStatus;
+      const finalPassFail = getPassFailStatus(finalAverage, failedCount, finalPromotion);
+
+      // Check if an existing cumulative record exists for this student and session to reuse ID and avoid duplicates
+      const existingCumulativeRecord = results.find(
+        (r) =>
+          (r.studentId || '').trim().toUpperCase() === cleanStudentId &&
+          (r.academicSession || '').trim() === cleanSession &&
+          (r.isCumulative || r.term === 'Annual Cumulative')
+      );
+
+      const targetId = editingResultId || (existingCumulativeRecord ? existingCumulativeRecord.id : `res-cum-${cleanStudentId.replace(/[^a-zA-Z0-9]/g, '_')}-${cleanSession.replace(/[^a-zA-Z0-9]/g, '_')}`);
+
+      const finalRecord: StudentResult = {
+        id: targetId,
+        studentId: cleanStudentId,
+        studentName: cleanStudentName,
+        passportPhoto: passportPhoto.trim() || undefined,
+        classLevel,
+        term: 'Annual Cumulative',
+        academicSession: cleanSession,
+        gender,
+        rollNumber: rollNumber.trim() || '01',
+        position: position.trim() || `${evaluated.promotionStatus}`,
+        attendance: cumulativeAttendance.trim() || '250 of 255 Days',
+        cumulativeAttendance: cumulativeAttendance.trim() || '250 of 255 Days',
+        promotionStatus: finalPromotion,
+        grossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
+        sessionGrossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
+        terminalAverage: finalAverage,
+        cumulativeSessionAverage: finalAverage,
+        gradePoint: gradePoint !== undefined ? gradePoint : evaluated.gradePoint,
+        accreditedGradeBracket: accreditedGradeBracket.trim() || evaluated.accreditedGradeBracket,
+        classStanding: classStanding.trim() || evaluated.classStanding,
+        passFailStatus: finalPassFail,
+        principalRemarks: principalRemarks.trim() || 'Annual academic session evaluation completed and approved.',
+        teacherRemarks: teacherRemarks.trim() || 'Commendable diligence throughout the academic year.',
+        subjectScores: formattedSubjects,
+        accessPassword: accessPassword.trim() || undefined,
+        isCumulative: true,
+        sessionTotalMaxMarks: evaluated.sessionTotalMaxMarks
       };
-    });
 
-    const evaluated = computeSessionCumulativeMetrics(formattedSubjects, {
-      classLevel,
-      position,
-      promotionStatus: promotionStatus || undefined,
-      accreditedGradeBracket: accreditedGradeBracket || undefined,
-      classStanding: classStanding || undefined
-    });
+      if ((editingResultId || existingCumulativeRecord) && onEditResult) {
+        onEditResult(targetId, finalRecord);
+        setFormSuccessMessage(`Updated cumulative session result for ${finalRecord.studentName} (${finalRecord.studentId}) successfully!`);
+      } else {
+        onAddResult(finalRecord);
+        setFormSuccessMessage(`Published cumulative session record for ${finalRecord.studentName} (${finalRecord.studentId}) successfully!`);
+      }
 
-    const finalRecord: StudentResult = {
-      id: editingResultId || `res-cumul-${Date.now()}`,
-      studentId: studentId.trim().toUpperCase(),
-      studentName: studentName.trim(),
-      passportPhoto: passportPhoto.trim() || undefined,
-      classLevel,
-      term: 'Annual Cumulative',
-      academicSession: academicSession.trim(),
-      gender,
-      rollNumber: rollNumber.trim(),
-      position: position.trim() || `${liveSessionMetrics.promotionStatus}`,
-      attendance: cumulativeAttendance.trim() || '250 of 255 Days',
-      cumulativeAttendance: cumulativeAttendance.trim() || '250 of 255 Days',
-      promotionStatus: promotionStatus.trim() || evaluated.promotionStatus,
-      grossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
-      sessionGrossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
-      terminalAverage: terminalAverage !== undefined ? terminalAverage : evaluated.sessionAverage,
-      cumulativeSessionAverage: terminalAverage !== undefined ? terminalAverage : evaluated.sessionAverage,
-      gradePoint: gradePoint !== undefined ? gradePoint : evaluated.gradePoint,
-      accreditedGradeBracket: accreditedGradeBracket.trim() || evaluated.accreditedGradeBracket,
-      classStanding: classStanding.trim() || evaluated.classStanding,
-      principalRemarks: principalRemarks.trim() || 'Annual academic session evaluation completed and approved.',
-      teacherRemarks: teacherRemarks.trim() || 'Commendable diligence throughout the academic year.',
-      subjectScores: formattedSubjects,
-      accessPassword: accessPassword.trim() || undefined,
-      isCumulative: true,
-      sessionTotalMaxMarks: evaluated.sessionTotalMaxMarks
-    };
-
-    if (editingResultId && onEditResult) {
-      onEditResult(editingResultId, finalRecord);
-      setFormSuccessMessage(`Updated cumulative session result for ${finalRecord.studentName} (${finalRecord.studentId}) successfully!`);
-    } else {
-      onAddResult(finalRecord);
-      setFormSuccessMessage(`Published cumulative session record for ${finalRecord.studentName} (${finalRecord.studentId}) successfully!`);
+      setLastPublishedRecord(finalRecord);
+      setEditingResultId(null);
+    } catch (err: any) {
+      console.error('Save cumulative record exception:', err);
+      setFormErrorMessage(`Failed to save cumulative result: ${err?.message || 'Unexpected error'}`);
+    } finally {
+      setIsPublishing(false);
     }
-
-    setEditingResultId(null);
-    setTimeout(() => setFormSuccessMessage(''), 6000);
   };
 
   // Copy PIN
@@ -839,6 +878,7 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
         <form
           ref={formRef}
           onSubmit={handleSubmit}
+          noValidate
           className={`p-4 md:p-5 rounded-xl border transition space-y-4 ${
             editingResultId
               ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/30'
@@ -1209,7 +1249,6 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
                         <td className="py-1.5 px-2">
                           <input
                             type="text"
-                            required
                             placeholder="e.g. Mathematics"
                             value={row.subject}
                             onChange={(e) => handleRowFieldChange(index, 'subject', e.target.value)}
@@ -1531,12 +1570,59 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
           </div>
 
           {/* Form Submit & Cancel Controls */}
+          {formErrorMessage && (
+            <div className="p-3.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-lg text-xs font-medium flex items-start gap-2 shadow-xs animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold">Cannot Publish Result</p>
+                <p>{formErrorMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {formSuccessMessage && (
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl shadow-xs space-y-2.5 animate-fade-in">
+              <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs md:text-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{formSuccessMessage}</span>
+              </div>
+              {lastPublishedRecord && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRegistrySearch(lastPublishedRecord.studentId);
+                      setActiveTab('registry');
+                    }}
+                    className="px-3.5 py-1.5 bg-brand-green text-white rounded text-xs font-bold uppercase tracking-wider hover:bg-brand-green-dark transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>View in Cumulative Registry & Broadsheet</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentId('');
+                      setStudentName('');
+                      setSelectedStudentForAutofill('');
+                      setFormSuccessMessage('');
+                      setLastPublishedRecord(null);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-800 rounded text-xs font-bold uppercase tracking-wider hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    + Input Another Student
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row justify-end items-center gap-2 pt-2 border-t border-slate-200">
             {editingResultId && (
               <button
                 type="button"
                 onClick={handleCancelEdit}
-                className="w-full sm:w-auto px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer"
               >
                 Cancel Edit
               </button>
@@ -1544,13 +1630,20 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
 
             <button
               type="submit"
+              disabled={isPublishing}
+              onClick={handleSubmit}
               className={`w-full ${
                 editingResultId
                   ? 'sm:flex-1 bg-amber-600 hover:bg-amber-700 border-amber-700'
                   : 'bg-brand-green hover:bg-brand-green-dark border-brand-green'
-              } px-5 py-2.5 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer border shadow-sm flex items-center justify-center space-x-1.5`}
+              } ${isPublishing ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} px-5 py-2.5 text-white rounded text-xs font-bold uppercase tracking-wider transition border shadow-sm flex items-center justify-center space-x-1.5`}
             >
-              {editingResultId ? (
+              {isPublishing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                  <span>Saving & Publishing...</span>
+                </>
+              ) : editingResultId ? (
                 <>
                   <Check className="w-4 h-4 mr-1" />
                   <span>Update Published Cumulative Session Record</span>

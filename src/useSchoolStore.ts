@@ -401,16 +401,22 @@ export function useSchoolStore() {
 
   // Helper to strip extended columns if remote Supabase table only has legacy core columns
   const stripResultExtendedColumns = (row: any) => {
-    const cleaned = { ...row };
-    delete cleaned.passport_photo;
-    delete cleaned.promotion_status;
-    delete cleaned.gross_total_marks;
-    delete cleaned.terminal_average;
-    delete cleaned.grade_point;
-    delete cleaned.accredited_grade_bracket;
-    delete cleaned.class_standing;
-    delete cleaned.pass_fail_status;
-    return cleaned;
+    return {
+      id: row.id,
+      student_id: row.student_id,
+      student_name: row.student_name,
+      class_level: row.class_level,
+      academic_session: row.academic_session,
+      term: row.term || '1st Term',
+      gender: row.gender || 'Male',
+      roll_number: row.roll_number || '01',
+      position: row.position || '',
+      attendance: row.attendance || '',
+      principal_remarks: row.principal_remarks || '',
+      teacher_remarks: row.teacher_remarks || '',
+      subject_scores: row.subject_scores || [],
+      access_password: row.access_password || null
+    };
   };
 
   // Sync state writes in the background to Supabase
@@ -748,7 +754,22 @@ export function useSchoolStore() {
 
   // --- Result Actions ---
   const addResult = (item: StudentResult) => {
-    const baseUpdated = [...results.filter(r => r.id !== item.id && !(r.studentId === item.studentId && r.term === item.term && r.academicSession === item.academicSession)), item];
+    const cleanStudentId = (item.studentId || '').trim().toUpperCase();
+    const cleanTerm = (item.term || '').trim();
+    const cleanSession = (item.academicSession || '').trim();
+
+    const baseUpdated = [
+      ...results.filter(
+        r =>
+          r.id !== item.id &&
+          !(
+            (r.studentId || '').trim().toUpperCase() === cleanStudentId &&
+            (r.term || '').trim() === cleanTerm &&
+            (r.academicSession || '').trim() === cleanSession
+          )
+      ),
+      item
+    ];
 
     let finalResults = baseUpdated;
 
@@ -819,7 +840,17 @@ export function useSchoolStore() {
       if (supabase) {
         const cumRows = synced.filter(r => r.isCumulative || r.term === 'Annual Cumulative').map(r => mapToDb('student_results', r));
         if (cumRows.length > 0) {
-          supabase.from('student_results').upsert(cumRows).then(() => {});
+          supabase.from('student_results').upsert(cumRows).then(async ({ error }) => {
+            if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
+              console.warn('Supabase student_results missing extended columns; retrying with core columns');
+              const coreRows = cumRows.map(r => stripResultExtendedColumns(r));
+              const retryRes = await supabase.from('student_results').upsert(coreRows);
+              error = retryRes.error;
+            }
+            if (error) {
+              console.error('Supabase cumulative sync error:', error);
+            }
+          });
         }
       }
     }

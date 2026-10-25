@@ -108,6 +108,9 @@ export function mapFromDb(table: string, row: any): any {
     if (row.accredited_grade_bracket) mapped.accreditedGradeBracket = row.accredited_grade_bracket;
     if (row.class_standing) mapped.classStanding = row.class_standing;
     if (row.pass_fail_status) mapped.passFailStatus = row.pass_fail_status;
+    if (row.term === 'Annual Cumulative' || (row.term && String(row.term).toLowerCase().includes('cumulative'))) {
+      mapped.isCumulative = true;
+    }
 
     delete mapped.student_id;
     delete mapped.student_name;
@@ -228,41 +231,30 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.uploadDate;
     delete mapped.accessPassword;
   } else if (table === 'student_results') {
-    mapped.student_id = item.studentId;
-    mapped.student_name = item.studentName;
-    mapped.class_level = item.classLevel;
-    mapped.academic_session = item.academicSession;
-    mapped.roll_number = item.rollNumber;
-    mapped.principal_remarks = item.principalRemarks || null;
-    mapped.teacher_remarks = item.teacherRemarks || null;
-    mapped.subject_scores = item.subjectScores || [];
-    mapped.access_password = item.accessPassword || null;
-    mapped.passport_photo = item.passportPhoto || null;
-    mapped.promotion_status = item.promotionStatus || null;
-    mapped.gross_total_marks = item.grossTotalMarks !== undefined && item.grossTotalMarks !== null ? item.grossTotalMarks : null;
-    mapped.terminal_average = item.terminalAverage !== undefined && item.terminalAverage !== null ? item.terminalAverage : null;
-    mapped.grade_point = item.gradePoint !== undefined && item.gradePoint !== null ? item.gradePoint : null;
-    mapped.accredited_grade_bracket = item.accreditedGradeBracket || null;
-    mapped.class_standing = item.classStanding || null;
-    mapped.pass_fail_status = item.passFailStatus || null;
-
-    delete mapped.studentId;
-    delete mapped.studentName;
-    delete mapped.classLevel;
-    delete mapped.academicSession;
-    delete mapped.rollNumber;
-    delete mapped.principalRemarks;
-    delete mapped.teacherRemarks;
-    delete mapped.subjectScores;
-    delete mapped.accessPassword;
-    delete mapped.passportPhoto;
-    delete mapped.promotionStatus;
-    delete mapped.grossTotalMarks;
-    delete mapped.terminalAverage;
-    delete mapped.gradePoint;
-    delete mapped.accreditedGradeBracket;
-    delete mapped.classStanding;
-    delete mapped.passFailStatus;
+    return {
+      id: item.id,
+      student_id: item.studentId || item.student_id,
+      student_name: item.studentName || item.student_name,
+      class_level: item.classLevel || item.class_level,
+      academic_session: item.academicSession || item.academic_session,
+      term: item.term || '1st Term',
+      gender: item.gender || 'Male',
+      roll_number: item.rollNumber || item.roll_number || '01',
+      position: item.position || '',
+      attendance: item.attendance || item.cumulativeAttendance || '',
+      principal_remarks: item.principalRemarks || item.principal_remarks || '',
+      teacher_remarks: item.teacherRemarks || item.teacher_remarks || '',
+      subject_scores: item.subjectScores || item.subject_scores || [],
+      access_password: item.accessPassword || item.access_password || null,
+      passport_photo: item.passportPhoto || item.passport_photo || null,
+      promotion_status: item.promotionStatus || item.promotion_status || null,
+      gross_total_marks: item.grossTotalMarks !== undefined && item.grossTotalMarks !== null ? item.grossTotalMarks : (item.gross_total_marks !== undefined ? item.gross_total_marks : null),
+      terminal_average: item.terminalAverage !== undefined && item.terminalAverage !== null ? item.terminalAverage : (item.terminal_average !== undefined ? item.terminal_average : null),
+      grade_point: item.gradePoint !== undefined && item.gradePoint !== null ? item.gradePoint : (item.grade_point !== undefined ? item.grade_point : null),
+      accredited_grade_bracket: item.accreditedGradeBracket || item.accredited_grade_bracket || null,
+      class_standing: item.classStanding || item.class_standing || null,
+      pass_fail_status: item.passFailStatus || item.pass_fail_status || null
+    };
   } else if (table === 'hero_slides') {
     mapped.image_url = item.imageUrl;
     mapped.slide_order = item.order ?? 0;

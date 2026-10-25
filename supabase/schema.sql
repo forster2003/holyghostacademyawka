@@ -134,6 +134,7 @@ alter table public.student_results add column if not exists terminal_average num
 alter table public.student_results add column if not exists grade_point numeric;
 alter table public.student_results add column if not exists accredited_grade_bracket text;
 alter table public.student_results add column if not exists class_standing text;
+alter table public.student_results add column if not exists pass_fail_status text;
 alter table public.student_results add column if not exists access_password text;
 
 -- -------------------------------------------------------------------------
