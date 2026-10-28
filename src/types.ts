@@ -253,5 +253,7 @@ export interface AcademicCalendarEvent {
 
 export const DEFAULT_ABOUT_US_IMAGE = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=800';
 export const DEFAULT_ABOUT_US_BADGE = 'Est. Pentecostal Church';
+export const DEFAULT_HEADER_LOGO = 'https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg';
+
 
 

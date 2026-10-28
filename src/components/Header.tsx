@@ -13,6 +13,7 @@ interface HeaderProps {
   setCurrentPage: (page: string) => void;
   isAdminLoggedIn: boolean;
   onLogout: () => void;
+  headerLogo?: string;
   theme?: 'light' | 'dark';
   toggleTheme?: () => void;
   documents?: DocumentItem[];
@@ -28,6 +29,7 @@ export default function Header({
   setCurrentPage, 
   isAdminLoggedIn, 
   onLogout,
+  headerLogo,
   theme = 'light',
   toggleTheme,
   documents = [],
@@ -103,13 +105,16 @@ export default function Header({
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleNavClick('home')}>
             <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white text-brand-green font-bold border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
               <img
-                src="https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"
+                src={headerLogo || "https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"}
                 alt="Holy Ghost Academy Secondary School Official Crest"
                 width={44}
                 height={44}
                 loading="eager"
                 decoding="async"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg";
+                }}
               />
             </div>
             <div>

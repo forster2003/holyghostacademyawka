@@ -8,12 +8,13 @@ import { SchoolSocialHandles } from '../types';
 
 interface FooterProps {
   setCurrentPage: (page: string) => void;
+  headerLogo?: string;
   theme?: 'light' | 'dark';
   toggleTheme?: () => void;
   socialHandles?: SchoolSocialHandles;
 }
 
-export default function Footer({ setCurrentPage, theme = 'light', toggleTheme, socialHandles }: FooterProps) {
+export default function Footer({ setCurrentPage, headerLogo, theme = 'light', toggleTheme, socialHandles }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -27,13 +28,16 @@ export default function Footer({ setCurrentPage, theme = 'light', toggleTheme, s
             <div className="flex items-center space-x-3">
               <div className="flex items-center justify-center w-11 h-11 rounded-full bg-white text-white border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
                 <img
-                  src="https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"
+                  src={headerLogo || "https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg"}
                   alt="Holy Ghost Academy Secondary School Official Crest"
                   width={44}
                   height={44}
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg";
+                  }}
                 />
               </div>
               <div>

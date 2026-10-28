@@ -20,7 +20,7 @@ import {
   StaffMember, StaffCategory,
   SchoolSubject, SchoolSocialHandles, SubjectCategory, SubjectLevel,
   HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent,
-  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE
+  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE, DEFAULT_HEADER_LOGO
 } from '../types';
 import { DEFAULT_HERO_SLIDES } from '../defaultData';
 import { StudentSheetSection } from './StudentSheetSection';
@@ -124,9 +124,12 @@ interface AdminViewProps {
   aboutUsBadge?: string;
   onUpdateAboutUsImage?: (image: string, badge?: string) => void;
   onResetAboutUsImage?: () => void;
+  headerLogo?: string;
+  onUpdateHeaderLogo?: (logoUrl: string) => void;
+  onResetHeaderLogo?: () => void;
   onNavigatePublicPage?: (page: string) => void;
   onSyncCumulative?: () => void;
-  initialActiveTab?: 'overview' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'seo';
+  initialActiveTab?: 'overview' | 'headerLogo' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'seo';
   initialSearchQuery?: string;
   initialSelectedResultId?: string;
 }
@@ -256,6 +259,7 @@ export default function AdminView({
   supabaseStatus, pushAllLocalToSupabase, pullAllFromSupabase,
   onDisconnectSupabase, onConnectSupabase,
   aboutUsImage, aboutUsBadge, onUpdateAboutUsImage, onResetAboutUsImage, onNavigatePublicPage,
+  headerLogo, onUpdateHeaderLogo, onResetHeaderLogo,
   onSyncCumulative,
   initialActiveTab, initialSearchQuery, initialSelectedResultId
 }: AdminViewProps) {
@@ -265,7 +269,97 @@ export default function AdminView({
   const [loginError, setLoginError] = useState('');
 
   // Dashboard Sub-navigation panel
-  const [activeTab, setActiveTab] = useState<'overview' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'seo'>(initialActiveTab || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'headerLogo' | 'supabase' | 'slides' | 'aboutUs' | 'milestones' | 'staff' | 'subjects' | 'social' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'seo'>(initialActiveTab || 'overview');
+
+  // Header Logo & School Crest Editor State
+  const [editHeaderLogo, setEditHeaderLogo] = useState<string>(headerLogo || DEFAULT_HEADER_LOGO);
+  const [logoInputMode, setLogoInputMode] = useState<'upload' | 'url' | 'presets'>('upload');
+  const [logoUploadedFileName, setLogoUploadedFileName] = useState<string>('');
+  const [logoSuccessNotice, setLogoSuccessNotice] = useState<string | null>(null);
+  const [logoErrorNotice, setLogoErrorNotice] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const overviewLogoFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (headerLogo) {
+      setEditHeaderLogo(headerLogo);
+    }
+  }, [headerLogo]);
+
+  const HEADER_LOGO_PRESETS = [
+    {
+      title: 'Official Holy Ghost Academy Crest',
+      desc: 'Authentic diocesan crest & coat of arms of Holy Ghost Academy, Awka',
+      badge: 'Official Academy Crest',
+      url: 'https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg'
+    },
+    {
+      title: 'Academy Golden Emblem & Motto Ring',
+      desc: 'High-contrast crest with Malu Chukwu, Malu Akwuko banner',
+      badge: 'Golden Ring Emblem',
+      url: 'https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg'
+    },
+    {
+      title: 'Diocesan Cross & Open Bible Shield',
+      desc: 'Faith, wisdom, and moral formation heraldic academy insignia',
+      badge: 'Heraldic Insignia',
+      url: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=400'
+    },
+    {
+      title: 'Excellence & Academic Laurels Crest',
+      desc: 'Classic scholarship insignia with laurel wreath and lamp of learning',
+      badge: 'Scholarship Laurels',
+      url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=400'
+    }
+  ];
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isDirectApply: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setLogoErrorNotice('Selected logo file exceeds 5MB limit. Please choose a smaller image file.');
+        setTimeout(() => setLogoErrorNotice(null), 5000);
+        return;
+      }
+      setLogoErrorNotice(null);
+      setLogoUploadedFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          const dataUrl = reader.result;
+          setEditHeaderLogo(dataUrl);
+          if (isDirectApply && onUpdateHeaderLogo) {
+            onUpdateHeaderLogo(dataUrl);
+            setLogoSuccessNotice(`New header crest "${file.name}" uploaded and applied live!`);
+            setTimeout(() => setLogoSuccessNotice(null), 5000);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveHeaderLogo = () => {
+    if (!editHeaderLogo.trim()) {
+      setLogoErrorNotice('Please provide a valid image file or paste a web URL.');
+      return;
+    }
+    if (onUpdateHeaderLogo) {
+      onUpdateHeaderLogo(editHeaderLogo.trim());
+      setLogoSuccessNotice('✓ School Header Logo & Crest updated successfully! The new crest is now live across the navigation header, mobile drawer, and footer.');
+      setTimeout(() => setLogoSuccessNotice(null), 6000);
+    }
+  };
+
+  const handleResetHeaderLogo = () => {
+    if (onResetHeaderLogo) {
+      onResetHeaderLogo();
+      setEditHeaderLogo(DEFAULT_HEADER_LOGO);
+      setLogoUploadedFileName('');
+      setLogoSuccessNotice('Header logo restored to the official Holy Ghost Academy diocesan crest!');
+      setTimeout(() => setLogoSuccessNotice(null), 5000);
+    }
+  };
 
   // About Us Image Editor State
   const [editAboutImage, setEditAboutImage] = useState(aboutUsImage || DEFAULT_ABOUT_US_IMAGE);
@@ -1742,6 +1836,7 @@ export default function AdminView({
           <div className="lg:col-span-3 bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Database },
+              { id: 'headerLogo', label: 'Header Crest & Logo', icon: Award },
               { id: 'slides', label: 'Homepage Slideshow Banner', icon: Sliders, badge: (heroSlides.length > 0 ? heroSlides.length : DEFAULT_HERO_SLIDES.length) },
               { id: 'aboutUs', label: 'About Us Section Image', icon: Compass },
               { id: 'milestones', label: 'School Key Statistics', icon: Award },
@@ -2204,6 +2299,99 @@ export default function AdminView({
                         <span>Open About Us Image Customizer</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Header Logo & Official School Crest Overview Card */}
+                <div className="bg-white rounded p-4 border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold shrink-0 border border-amber-200">
+                        <Award className="w-4 h-4 text-amber-700" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">Header Logo & Official School Crest</h4>
+                        <p className="text-[10px] text-slate-400">Official crest displayed in the sticky navigation header, mobile menu, and receipts</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('headerLogo')}
+                        className="px-3 py-1 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase transition flex items-center space-x-1 cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1" />
+                        <span>Manage Crest & Logo</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {logoSuccessNotice && (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{logoSuccessNotice}</span>
+                    </div>
+                  )}
+
+                  {/* Hidden file input for fast 1-click device logo upload from overview */}
+                  <input
+                    type="file"
+                    ref={overviewLogoFileInputRef}
+                    accept="image/*"
+                    onChange={(e) => handleLogoFileUpload(e, true)}
+                    className="hidden"
+                  />
+
+                  <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                    {/* Simulated Header Badge Frame */}
+                    <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-white text-brand-green font-bold border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
+                      <img
+                        src={editHeaderLogo || DEFAULT_HEADER_LOGO}
+                        alt="Holy Ghost Academy Official Crest"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = DEFAULT_HEADER_LOGO;
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1.5 text-xs text-slate-600 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800 uppercase text-xs">Holy Ghost Academy Secondary School Crest</span>
+                        <span className="px-1.5 py-0.2 rounded bg-brand-green/10 text-brand-green text-[9px] font-bold uppercase">Active</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        The header crest represents the institution across all device screens and printable grade records. You can upload an official PNG/JPG file from your device, link a cloud image URL, or choose an emblem preset.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => overviewLogoFileInputRef.current?.click()}
+                          className="px-2.5 py-1 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[10px] font-bold uppercase tracking-wider transition flex items-center gap-1 cursor-pointer shadow-xs"
+                          title="Upload new crest image file from computer or phone"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          <span>Upload From Device</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('headerLogo')}
+                          className="text-brand-green font-bold text-xs hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Open Full Logo Studio</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                        {editHeaderLogo !== DEFAULT_HEADER_LOGO && (
+                          <button
+                            type="button"
+                            onClick={handleResetHeaderLogo}
+                            className="text-amber-700 hover:text-amber-900 font-bold text-[10.5px] hover:underline flex items-center gap-0.5 cursor-pointer ml-auto"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Restore Default</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -7353,6 +7541,411 @@ export default function AdminView({
                         >
                           <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
                           <span>Open Public About Page in New View</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* T-HEADER-LOGO: HEADER CREST & SCHOOL LOGO CUSTOMIZER */}
+            {activeTab === 'headerLogo' && (
+              <div className="space-y-6 animate-fade-in font-sans">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-emerald-900 via-brand-green to-teal-950 text-white rounded-lg p-5 shadow-sm border border-brand-yellow/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Award className="w-5 h-5 text-brand-yellow shrink-0" />
+                      <h3 className="text-lg font-black font-heading text-white tracking-tight uppercase">
+                        Header Crest & School Identity Logo
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-200 max-w-xl font-light leading-relaxed">
+                      Update the official Holy Ghost Academy crest and emblem displayed in the top sticky navigation header, mobile drawer menu, official printable transcripts, and website footer.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onNavigatePublicPage && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigatePublicPage('home')}
+                        className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5 border border-white/20"
+                        title="View Public Homepage Header"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View Live Header</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleResetHeaderLogo}
+                      className="px-3 py-2 bg-brand-yellow hover:bg-yellow-400 text-brand-oxblood font-black rounded text-xs uppercase tracking-wider transition cursor-pointer flex items-center space-x-1.5 shadow-xs"
+                      title="Restore original Holy Ghost Academy official crest"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Reset to Official Crest</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Notice Alerts */}
+                {logoSuccessNotice && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-800 text-xs font-semibold flex items-center justify-between animate-fade-in shadow-2xs">
+                    <div className="flex items-center space-x-2.5">
+                      <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                      <span>{logoSuccessNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLogoSuccessNotice(null)}
+                      className="text-emerald-700 hover:text-emerald-950 p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {logoErrorNotice && (
+                  <div className="p-3.5 bg-red-50 border border-red-300 rounded-lg text-red-800 text-xs font-semibold flex items-center justify-between animate-fade-in shadow-2xs">
+                    <div className="flex items-center space-x-2.5">
+                      <AlertCircle className="w-4.5 h-4.5 text-red-600 shrink-0" />
+                      <span>{logoErrorNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLogoErrorNotice(null)}
+                      className="text-red-700 hover:text-red-950 p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Two-Column Editor Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  
+                  {/* Left Column: Form & Source Pickers */}
+                  <div className="lg:col-span-7 space-y-5">
+                    
+                    {/* Source Selection Mode Tabs */}
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-4">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                          Step 1: Choose Logo / Crest Source
+                        </label>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Upload an image file from your computer or phone, paste an image link, or select from official diocesan crest archives.
+                        </p>
+                      </div>
+
+                      {/* Mode Pills */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'upload', label: 'Upload from Device', icon: Upload },
+                          { id: 'url', label: 'Web Image URL', icon: Globe },
+                          { id: 'presets', label: 'Diocesan Crest Presets', icon: Award }
+                        ].map((m) => {
+                          const MIcon = m.icon;
+                          const isCurrent = logoInputMode === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setLogoInputMode(m.id as any);
+                                setLogoErrorNotice(null);
+                              }}
+                              className={`p-2.5 rounded-lg border text-xs font-bold transition flex flex-col items-center justify-center gap-1.5 cursor-pointer text-center ${
+                                isCurrent
+                                  ? 'bg-brand-green text-white border-brand-green shadow-xs'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <MIcon className="w-4 h-4 shrink-0" />
+                              <span className="text-[10.5px] leading-tight">{m.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Hidden File Input */}
+                      <input
+                        type="file"
+                        ref={logoFileInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/jpg,image/svg+xml"
+                        onChange={(e) => handleLogoFileUpload(e, false)}
+                        className="hidden"
+                      />
+
+                      {/* Tab 1: Upload from Device */}
+                      {logoInputMode === 'upload' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <div
+                            onClick={() => logoFileInputRef.current?.click()}
+                            className="p-6 border-2 border-dashed border-slate-300 hover:border-brand-green rounded-xl bg-slate-50 hover:bg-green-50/40 text-center cursor-pointer transition flex flex-col items-center justify-center space-y-2 group"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-white shadow-2xs border border-slate-200 flex items-center justify-center text-brand-green group-hover:scale-105 transition">
+                              <Camera className="w-6 h-6 text-brand-green" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">
+                                Click or browse to upload school logo from your device
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                Supports high-resolution PNG, JPG, SVG, or WEBP (up to 5MB, square 1:1 recommended)
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded text-[11px] font-bold uppercase tracking-wider transition shadow-2xs cursor-pointer flex items-center space-x-1.5"
+                            >
+                              <FolderOpen className="w-3.5 h-3.5" />
+                              <span>Select Logo Image File</span>
+                            </button>
+                          </div>
+
+                          {logoUploadedFileName && (
+                            <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between text-xs text-emerald-900">
+                              <div className="flex items-center space-x-2 truncate">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span className="font-mono text-[11px] truncate">{logoUploadedFileName}</span>
+                              </div>
+                              <span className="text-[10px] font-bold uppercase bg-emerald-200/60 text-emerald-900 px-2 py-0.5 rounded">
+                                Ready to Save
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tab 2: Direct Image URL */}
+                      {logoInputMode === 'url' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                              Paste Direct Image Web Link (HTTPS)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={editHeaderLogo}
+                                onChange={(e) => {
+                                  setEditHeaderLogo(e.target.value);
+                                  setLogoUploadedFileName('');
+                                }}
+                                placeholder="https://i.ibb.co/... or https://domain.edu/logo.png"
+                                className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-300 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green focus:outline-hidden"
+                              />
+                              {editHeaderLogo && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditHeaderLogo('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-[10.5px] text-amber-900 space-y-1">
+                            <p className="font-bold flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Hosting Recommendation:</span>
+                            </p>
+                            <p className="leading-relaxed">
+                              You can host your school crest on free secure image hosts like <strong>ImgBB (ibb.co)</strong>, <strong>Cloudinary</strong>, or <strong>Imgur</strong> and paste the direct image link here.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tab 3: Curated Crest Presets */}
+                      {logoInputMode === 'presets' && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                          <p className="text-[11px] text-slate-500">
+                            Select one of the official Holy Ghost Academy diocesan design variations:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {HEADER_LOGO_PRESETS.map((preset, idx) => {
+                              const isSelected = editHeaderLogo === preset.url;
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    setEditHeaderLogo(preset.url);
+                                    setLogoUploadedFileName('');
+                                  }}
+                                  className={`p-3 rounded-lg border cursor-pointer transition flex items-center gap-3 ${
+                                    isSelected
+                                      ? 'border-brand-green ring-2 ring-brand-green/20 bg-emerald-50/60'
+                                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                                  }`}
+                                >
+                                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-brand-yellow shrink-0 bg-white shadow-xs">
+                                    <img src={preset.url} alt={preset.title} className="w-full h-full object-cover" />
+                                    {isSelected && (
+                                      <div className="absolute inset-0 bg-brand-green/40 flex items-center justify-center text-white">
+                                        <Check className="w-5 h-5 drop-shadow" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <p className="text-xs font-bold text-slate-800 truncate">{preset.title}</p>
+                                      {isSelected && (
+                                        <span className="text-[9px] font-bold text-brand-green bg-emerald-100 px-1.5 py-0.2 rounded shrink-0">
+                                          Selected
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 line-clamp-1">{preset.desc}</p>
+                                    <span className="inline-block text-[8.5px] font-mono text-brand-oxblood uppercase font-bold">
+                                      {preset.badge}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Step 2: Save Action Bar */}
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                          Step 2: Commit & Apply to Header
+                        </label>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Saving will immediately update the logo across the sticky navigation bar, mobile menu, and all portal footers.
+                        </p>
+                      </div>
+
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={handleResetHeaderLogo}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1.5"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Reset to Default</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSaveHeaderLogo}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-brand-green hover:bg-brand-green-dark text-white rounded-md text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-2 shadow-sm"
+                        >
+                          <Sparkles className="w-4 h-4 text-brand-yellow" />
+                          <span>Save & Apply Header Logo</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Live Header Simulator */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-2xs space-y-4 sticky top-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center space-x-1.5">
+                          <Eye className="w-4 h-4 text-brand-green" />
+                          <h4 className="font-bold text-xs text-slate-800 uppercase tracking-tight">
+                            Live Header Simulator
+                          </h4>
+                        </div>
+                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">
+                          Real-time Preview
+                        </span>
+                      </div>
+
+                      {/* Header Simulator Frame */}
+                      <div className="rounded-xl overflow-hidden shadow-md border-2 border-brand-yellow/60 bg-brand-green text-white">
+                        {/* Top Banner simulation */}
+                        <div className="bg-brand-oxblood text-white text-[8.5px] px-3 py-1 flex justify-between items-center font-sans tracking-wide">
+                          <span className="truncate">📍 Ngozika Housing Estate, Awka</span>
+                          <span className="text-brand-yellow font-bold shrink-0">Character • Faith</span>
+                        </div>
+
+                        {/* Navigation bar simulation */}
+                        <div className="px-3.5 py-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-2.5">
+                            {/* Circular crest badge exactly as on Header */}
+                            <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-white text-brand-green font-bold border-2 border-brand-yellow overflow-hidden shrink-0 shadow-sm">
+                              <img
+                                src={editHeaderLogo || DEFAULT_HEADER_LOGO}
+                                alt="Official Crest Preview"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src = DEFAULT_HEADER_LOGO;
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold font-heading text-white leading-none uppercase tracking-tight block">
+                                Holy Ghost Academy
+                              </span>
+                              <p className="text-[7.5px] uppercase tracking-widest text-brand-yellow font-bold mt-0.5">
+                                Secondary School, Awka
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Dummy Nav items */}
+                          <div className="hidden sm:flex items-center space-x-1 text-[9px] font-bold uppercase tracking-wider text-white/80">
+                            <span className="px-1.5 py-0.5 rounded bg-brand-oxblood text-white">Home</span>
+                            <span className="px-1.5 py-0.5">About</span>
+                            <span className="px-1.5 py-0.5">Portal</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technical & Placement Details */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-[11px] text-slate-600">
+                        <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Logo Source:</span>
+                          <span className="font-mono font-bold text-[10px] text-brand-oxblood truncate max-w-[190px]">
+                            {editHeaderLogo.startsWith('data:')
+                              ? 'Local Uploaded File'
+                              : editHeaderLogo === DEFAULT_HEADER_LOGO
+                              ? 'Official Academy Default'
+                              : 'Cloud Link (HTTPS)'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Display Shape:</span>
+                          <span className="font-semibold text-slate-800">44px Circular Frame with Gold Ring</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold uppercase text-[9px] text-slate-500">Recommended Dimensions:</span>
+                          <span className="font-semibold text-slate-800">1:1 Square (min 200×200px)</span>
+                        </div>
+                      </div>
+
+                      {/* Footer Notice */}
+                      <div className="p-3 bg-brand-green/5 rounded-lg border border-brand-green/20 space-y-1 text-[10.5px] text-slate-600">
+                        <h5 className="font-bold text-[10px] text-brand-green uppercase tracking-wide flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Institutional Identity Guarantee</span>
+                        </h5>
+                        <p className="leading-relaxed">
+                          The logo is automatically rendered with an onError safety fallback to ensure Holy Ghost Academy branding is never broken, even during offline or slow network conditions.
+                        </p>
+                      </div>
+
+                      {onNavigatePublicPage && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigatePublicPage('home')}
+                          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center space-x-1 border border-slate-200"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                          <span>View Public Website Header</span>
                         </button>
                       )}
                     </div>

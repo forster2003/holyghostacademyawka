@@ -40,7 +40,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<string>(getInitialPage);
   useSeo(currentPage, setCurrentPage);
 
-  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'supabase' | 'slides' | 'aboutUs' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social' | 'seo'>('overview');
+  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'headerLogo' | 'supabase' | 'slides' | 'aboutUs' | 'news' | 'projects' | 'images' | 'videos' | 'documents' | 'results' | 'analytics' | 'cumulative' | 'attendance' | 'calendar' | 'messages' | 'payments' | 'milestones' | 'staff' | 'subjects' | 'social' | 'seo'>('overview');
   const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
   const [adminSelectedResultId, setAdminSelectedResultId] = useState<string | null>(null);
   const { theme, isDark, toggleTheme } = useTheme();
@@ -139,6 +139,9 @@ export default function App() {
     aboutUsBadge,
     updateAboutUsImage,
     resetAboutUsImage,
+    headerLogo,
+    updateHeaderLogo,
+    resetHeaderLogo,
     syncCumulativeRecords
   } = useSchoolStore();
 
@@ -287,6 +290,9 @@ export default function App() {
             aboutUsBadge={aboutUsBadge}
             onUpdateAboutUsImage={updateAboutUsImage}
             onResetAboutUsImage={resetAboutUsImage}
+            headerLogo={headerLogo}
+            onUpdateHeaderLogo={updateHeaderLogo}
+            onResetHeaderLogo={resetHeaderLogo}
             onNavigatePublicPage={(page) => setCurrentPage(page)}
             onSyncCumulative={syncCumulativeRecords}
             initialActiveTab={adminInitialTab}
@@ -309,6 +315,7 @@ export default function App() {
           setCurrentPage={setCurrentPage} 
           isAdminLoggedIn={isAdminLoggedIn}
           onLogout={logoutAdmin}
+          headerLogo={headerLogo}
           theme={theme}
           toggleTheme={toggleTheme}
           documents={documents}
@@ -399,6 +406,7 @@ export default function App() {
       <div className="no-print">
         <Footer 
           setCurrentPage={setCurrentPage} 
+          headerLogo={headerLogo}
           theme={theme}
           toggleTheme={toggleTheme}
           socialHandles={socialHandles}

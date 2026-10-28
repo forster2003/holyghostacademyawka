@@ -9,7 +9,7 @@ import {
   StudentResult, ContactMessage, PaymentRecord, SchoolMilestoneStats, 
   DEFAULT_MILESTONE_STATS, StaffMember, SchoolSubject, SchoolSocialHandles, 
   DEFAULT_SOCIAL_HANDLES, HeroSlide, DailyAttendanceRecord, AcademicCalendarEvent,
-  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE
+  DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE, DEFAULT_HEADER_LOGO
 } from './types';
 import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES, INITIAL_ATTENDANCE_RECORDS, INITIAL_CALENDAR_EVENTS } from './defaultData';
 import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
@@ -33,6 +33,7 @@ export function useSchoolStore() {
   const [milestoneStats, setMilestoneStats] = useState<SchoolMilestoneStats>(DEFAULT_MILESTONE_STATS);
   const [aboutUsImage, setAboutUsImage] = useState<string>(DEFAULT_ABOUT_US_IMAGE);
   const [aboutUsBadge, setAboutUsBadge] = useState<string>(DEFAULT_ABOUT_US_BADGE);
+  const [headerLogo, setHeaderLogo] = useState<string>(DEFAULT_HEADER_LOGO);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'connected' | 'error'>('idle');
@@ -282,6 +283,14 @@ export function useSchoolStore() {
         } else {
           setAboutUsBadge(DEFAULT_ABOUT_US_BADGE);
           localStorage.setItem('hgass_about_badge', DEFAULT_ABOUT_US_BADGE);
+        }
+
+        const storedHeaderLogo = localStorage.getItem('hgass_header_logo');
+        if (storedHeaderLogo) {
+          setHeaderLogo(storedHeaderLogo);
+        } else {
+          setHeaderLogo(DEFAULT_HEADER_LOGO);
+          localStorage.setItem('hgass_header_logo', DEFAULT_HEADER_LOGO);
         }
 
         if (storedAuth === 'true') {
@@ -1236,6 +1245,26 @@ export function useSchoolStore() {
     }
   };
 
+  // --- Header Logo Actions ---
+  const updateHeaderLogo = (newLogoUrl: string) => {
+    const trimmed = newLogoUrl.trim() || DEFAULT_HEADER_LOGO;
+    setHeaderLogo(trimmed);
+    try {
+      localStorage.setItem('hgass_header_logo', trimmed);
+    } catch (e) {
+      console.error('Failed to save header logo in localStorage:', e);
+    }
+  };
+
+  const resetHeaderLogo = () => {
+    setHeaderLogo(DEFAULT_HEADER_LOGO);
+    try {
+      localStorage.setItem('hgass_header_logo', DEFAULT_HEADER_LOGO);
+    } catch (e) {
+      console.error('Failed to reset header logo in localStorage:', e);
+    }
+  };
+
   // Dynamic calculations for Stats
   const stats = {
     totalStudents: results.reduce((acc, current) => {
@@ -1296,6 +1325,9 @@ export function useSchoolStore() {
     aboutUsBadge,
     updateAboutUsImage,
     resetAboutUsImage,
+    headerLogo,
+    updateHeaderLogo,
+    resetHeaderLogo,
     loginAdmin,
     logoutAdmin,
     addNews,
