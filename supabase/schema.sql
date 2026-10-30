@@ -130,7 +130,6 @@ create table if not exists public.student_results (
   gender text not null default 'Male',
   roll_number text default null, -- Optional / legacy only (no longer required)
   position text not null,
-  attendance text not null,
   promotion_status text,
   gross_total_marks numeric,
   terminal_average numeric,
@@ -157,6 +156,9 @@ create table if not exists public.student_results (
 
 -- Ensure optionality & presence of modern result columns
 alter table public.student_results alter column roll_number drop not null;
+alter table public.student_results alter column attendance drop not null;
+alter table public.student_results drop column if exists attendance;
+alter table public.student_results drop column if exists cumulative_attendance;
 alter table public.student_results add column if not exists passport_photo text;
 alter table public.student_results add column if not exists promotion_status text;
 alter table public.student_results add column if not exists gross_total_marks numeric;

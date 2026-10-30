@@ -231,7 +231,7 @@ export function mapToDb(table: string, item: any): any {
     delete mapped.uploadDate;
     delete mapped.accessPassword;
   } else if (table === 'student_results') {
-    return {
+    const resPayload: any = {
       id: item.id,
       student_id: item.studentId || item.student_id,
       student_name: item.studentName || item.student_name,
@@ -239,9 +239,7 @@ export function mapToDb(table: string, item: any): any {
       academic_session: item.academicSession || item.academic_session,
       term: item.term || '1st Term',
       gender: item.gender || 'Male',
-      roll_number: item.rollNumber || item.roll_number || '01',
       position: item.position || '',
-      attendance: item.attendance || item.cumulativeAttendance || '',
       principal_remarks: item.principalRemarks || item.principal_remarks || '',
       teacher_remarks: item.teacherRemarks || item.teacher_remarks || '',
       subject_scores: item.subjectScores || item.subject_scores || [],
@@ -255,6 +253,12 @@ export function mapToDb(table: string, item: any): any {
       class_standing: item.classStanding || item.class_standing || null,
       pass_fail_status: item.passFailStatus || item.pass_fail_status || null
     };
+
+    if (item.rollNumber || item.roll_number) {
+      resPayload.roll_number = item.rollNumber || item.roll_number;
+    }
+
+    return resPayload;
   } else if (table === 'hero_slides') {
     mapped.image_url = item.imageUrl;
     mapped.slide_order = item.order ?? 0;
@@ -314,4 +318,43 @@ export function mapToDb(table: string, item: any): any {
   delete mapped.updatedAt;
 
   return mapped;
+}
+
+/**
+ * Safe upsert that automatically recovers from PGRST204 errors when a column does not exist
+ * in the remote Supabase schema cache (e.g. dropped attendance or legacy columns).
+ */
+export async function safeUpsertToSupabase(supabase: any, table: string, rows: any[] | any): Promise<{ data: any; error: any }> {
+  const isArray = Array.isArray(rows);
+  let batch = isArray ? rows.map((r: any) => ({ ...r })) : [{ ...rows }];
+  let attempts = 0;
+
+  while (attempts < 6) {
+    const res = await supabase.from(table).upsert(isArray ? batch : batch[0]);
+    if (!res.error) {
+      return res;
+    }
+
+    const err = res.error;
+    // Check if error is PGRST204 or contains missing column details
+    if (err.code === 'PGRST204' || err.message?.includes('schema cache') || err.message?.includes('Could not find')) {
+      const match = err.message?.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1]) {
+        const missingCol = match[1];
+        console.warn(`Supabase ${table} table missing column '${missingCol}'; dynamically pruning and retrying upsert`);
+        batch = batch.map((r: any) => {
+          const copy = { ...r };
+          delete copy[missingCol];
+          return copy;
+        });
+        attempts++;
+        continue;
+      }
+    }
+
+    // Return the error if it cannot be auto-pruned
+    return res;
+  }
+
+  return await supabase.from(table).upsert(isArray ? batch : batch[0]);
 }

@@ -12,7 +12,7 @@ import {
   DEFAULT_ABOUT_US_IMAGE, DEFAULT_ABOUT_US_BADGE, DEFAULT_HEADER_LOGO
 } from './types';
 import { INITIAL_NEWS, INITIAL_PROJECTS, INITIAL_GALLERY, INITIAL_VIDEOS, INITIAL_DOCUMENTS, INITIAL_RESULTS, INITIAL_MESSAGES, INITIAL_PAYMENTS, INITIAL_STAFF, INITIAL_SUBJECTS, DEFAULT_HERO_SLIDES, INITIAL_ATTENDANCE_RECORDS, INITIAL_CALENDAR_EVENTS } from './defaultData';
-import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb } from './supabasePortal';
+import { isSupabaseConfigured, getSupabaseClient, mapFromDb, mapToDb, safeUpsertToSupabase } from './supabasePortal';
 import { buildCumulativeResultFromTerms, syncAllCumulativeResults } from './gradeUtils';
 
 export function useSchoolStore() {
@@ -410,7 +410,7 @@ export function useSchoolStore() {
 
   // Helper to strip extended columns if remote Supabase table only has legacy core columns
   const stripResultExtendedColumns = (row: any) => {
-    return {
+    const copy: any = {
       id: row.id,
       student_id: row.student_id,
       student_name: row.student_name,
@@ -418,14 +418,16 @@ export function useSchoolStore() {
       academic_session: row.academic_session,
       term: row.term || '1st Term',
       gender: row.gender || 'Male',
-      roll_number: row.roll_number || '01',
       position: row.position || '',
-      attendance: row.attendance || '',
       principal_remarks: row.principal_remarks || '',
       teacher_remarks: row.teacher_remarks || '',
       subject_scores: row.subject_scores || [],
       access_password: row.access_password || null
     };
+    if (row.roll_number) {
+      copy.roll_number = row.roll_number;
+    }
+    return copy;
   };
 
   // Sync state writes in the background to Supabase
@@ -437,11 +439,11 @@ export function useSchoolStore() {
     try {
       if (action === 'insert' || action === 'update') {
         const dbData = mapToDb(table, data);
-        let { error } = await supabase.from(table).upsert([dbData]);
+        let { error } = await safeUpsertToSupabase(supabase, table, dbData);
         if (error && table === 'student_results' && (error.code === 'PGRST204' || error.message?.includes('column'))) {
           console.warn('Supabase student_results table missing extended columns; retrying with core columns');
           const fallbackData = stripResultExtendedColumns(dbData);
-          const retryRes = await supabase.from(table).upsert([fallbackData]);
+          const retryRes = await safeUpsertToSupabase(supabase, table, fallbackData);
           error = retryRes.error;
         }
         if (error) {
@@ -475,11 +477,11 @@ export function useSchoolStore() {
       const pushResults = async () => {
         if (results.length === 0) return { error: null };
         const rows = results.map(x => mapToDb('student_results', x));
-        let res = await supabase.from('student_results').upsert(rows);
+        let res = await safeUpsertToSupabase(supabase, 'student_results', rows);
         if (res.error && (res.error.code === 'PGRST204' || res.error.message?.includes('column'))) {
           console.warn('Supabase student_results missing extended columns; retrying with core columns');
           const coreRows = rows.map(r => stripResultExtendedColumns(r));
-          res = await supabase.from('student_results').upsert(coreRows);
+          res = await safeUpsertToSupabase(supabase, 'student_results', coreRows);
         }
         return res;
       };
@@ -849,11 +851,11 @@ export function useSchoolStore() {
       if (supabase) {
         const cumRows = synced.filter(r => r.isCumulative || r.term === 'Annual Cumulative').map(r => mapToDb('student_results', r));
         if (cumRows.length > 0) {
-          supabase.from('student_results').upsert(cumRows).then(async ({ error }) => {
+          safeUpsertToSupabase(supabase, 'student_results', cumRows).then(async ({ error }) => {
             if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
               console.warn('Supabase student_results missing extended columns; retrying with core columns');
               const coreRows = cumRows.map(r => stripResultExtendedColumns(r));
-              const retryRes = await supabase.from('student_results').upsert(coreRows);
+              const retryRes = await safeUpsertToSupabase(supabase, 'student_results', coreRows);
               error = retryRes.error;
             }
             if (error) {
@@ -875,11 +877,11 @@ export function useSchoolStore() {
       const supabase = getSupabaseClient();
       if (supabase) {
         const dbRows = resultsList.map(item => mapToDb('student_results', item));
-        supabase.from('student_results').upsert(dbRows).then(async ({ error }) => {
+        safeUpsertToSupabase(supabase, 'student_results', dbRows).then(async ({ error }) => {
           if (error && (error.code === 'PGRST204' || error.message?.includes('column'))) {
             console.warn('Bulk result import retry with core columns only');
             const coreRows = dbRows.map(r => stripResultExtendedColumns(r));
-            const retryRes = await supabase.from('student_results').upsert(coreRows);
+            const retryRes = await safeUpsertToSupabase(supabase, 'student_results', coreRows);
             error = retryRes.error;
           }
           if (error) {
