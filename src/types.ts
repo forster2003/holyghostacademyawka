@@ -79,9 +79,9 @@ export interface StudentResult {
   term: string; // "1st Term", "2nd Term", "3rd Term", "Annual Cumulative"
   academicSession: string; // e.g. "2025/2026"
   gender: string; // SEX (Male / Female)
-  rollNumber: string;
+  rollNumber?: string;
   position: string; // e.g. "1st of 45" - class placement
-  attendance: string; // e.g. "82 of 85 days"
+  attendance?: string; // e.g. "82 of 85 days" (Optional)
   promotionStatus?: string; // e.g. "Promoted to SS 3", "Promoted to Next Class", "Promoted on Trial", "Repeats Class"
   grossTotalMarks?: number; // Gross accumulated score across all subjects
   terminalAverage?: number; // Terminal average percentage score
@@ -101,7 +101,7 @@ export interface StudentResult {
   cumulativeSessionAverage?: number; // Cumulative average % across the entire session
   sessionGrossTotalMarks?: number; // Total gross marks across all subjects
   sessionTotalMaxMarks?: number; // Maximum possible marks across all subjects
-  cumulativeAttendance?: string; // Cumulative attendance for the full academic session
+  cumulativeAttendance?: string; // Cumulative attendance for the full academic session (Optional)
 }
 
 export interface ContactMessage {
@@ -226,7 +226,7 @@ export interface RosterStudent {
   studentName: string;
   classLevel: string;
   gender: 'Male' | 'Female';
-  rollNumber: string;
+  rollNumber?: string;
   passportPhoto?: string;
 }
 

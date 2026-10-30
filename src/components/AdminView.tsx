@@ -841,7 +841,6 @@ export default function AdminView({
   const [manualGender, setManualGender] = useState('Male');
   const [manualRollNo, setManualRollNo] = useState('');
   const [manualPos, setManualPos] = useState('');
-  const [manualAttendance, setManualAttendance] = useState('');
   const [manualTeacherComment, setManualTeacherComment] = useState('');
   const [manualPrincipalComment, setManualPrincipalComment] = useState('');
   const [manualAccessPassword, setManualAccessPassword] = useState('');
@@ -1368,7 +1367,6 @@ export default function AdminView({
     setManualStudentName('');
     setManualRollNo('');
     setManualPos('');
-    setManualAttendance('');
     setManualTeacherComment('');
     setManualPrincipalComment('');
     setManualAccessPassword('');
@@ -1395,7 +1393,6 @@ export default function AdminView({
     setManualGender(res.gender || 'Male');
     setManualRollNo(res.rollNumber);
     setManualPos(res.position);
-    setManualAttendance(res.attendance || '');
     setManualTeacherComment(res.teacherRemarks || '');
     setManualPrincipalComment(res.principalRemarks || '');
     setManualAccessPassword(res.accessPassword || '');
@@ -1463,8 +1460,8 @@ export default function AdminView({
 
   const handleManualResultSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualStudentId.trim() || !manualStudentName.trim() || !manualRollNo.trim() || !manualPos.trim()) {
-      setResultNotice({ type: 'error', message: 'Please fill in core student registration details (Student ID, Name, Roll No, Class Placement).' });
+    if (!manualStudentId.trim() || !manualStudentName.trim() || !manualPos.trim()) {
+      setResultNotice({ type: 'error', message: 'Please fill in core student registration details (Student ID, Name, Class Placement).' });
       setTimeout(() => setResultNotice(null), 4000);
       return;
     }
@@ -1490,7 +1487,6 @@ export default function AdminView({
           gender: manualGender,
           rollNumber: manualRollNo,
           position: manualPos.trim(),
-          attendance: manualAttendance || "85 of 85 Days",
           principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
           teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
           subjectScores: formattedScores,
@@ -1525,7 +1521,6 @@ export default function AdminView({
       gender: manualGender,
       rollNumber: manualRollNo,
       position: manualPos.trim(),
-      attendance: manualAttendance || "85 of 85 Days",
       principalRemarks: manualPrincipalComment || "Hardworking and highly disciplined.",
       teacherRemarks: manualTeacherComment || "An exemplary student. Keep it up.",
       subjectScores: formattedScores,
@@ -1566,8 +1561,8 @@ export default function AdminView({
         return;
       }
 
-      // Quick check: let's expect a structure like:
-      // studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore
+      // Expected structure without rollNumber & attendance:
+      // studentId,studentName,classLevel,term,academicSession,gender,position,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
       
       const newResults: StudentResult[] = [];
       const studentMap = new Map<string, StudentResult>();
@@ -1579,15 +1574,50 @@ export default function AdminView({
         // Split CSV handling commas
         const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
 
-        if (cols.length < 14) {
-          setResultParseError(`Row ${i + 1} has insufficient columns. Required at least 14.`);
+        if (cols.length < 12) {
+          setResultParseError(`Row ${i + 1} has insufficient columns. Required at least 12.`);
           return;
         }
 
-        const [
-          sId, sName, cLevel, term, session, gender, roll, pos, att, tRemarks, pRemarks, 
-          subject, test, exam, pass
-        ] = cols;
+        const sId = cols[0];
+        const sName = cols[1];
+        const cLevel = cols[2];
+        const term = cols[3];
+        const session = cols[4];
+        const gender = cols[5];
+
+        let pos = '';
+        let tRemarks = '';
+        let pRemarks = '';
+        let subject = '';
+        let test = '';
+        let exam = '';
+        let pass = '';
+
+        // Check if row has legacy attendance (e.g., "85 of 85 Days" in column 7 or 8)
+        const hasLegacyAttendance = cols.some(c => c.toLowerCase().includes('day'));
+
+        if (hasLegacyAttendance) {
+          // Legacy format with attendance column:
+          // [sId, sName, cLevel, term, session, gender, pos, att, tRemarks, pRemarks, subject, test, exam, pass]
+          pos = cols[6] || '';
+          tRemarks = cols[8] || '';
+          pRemarks = cols[9] || '';
+          subject = cols[10] || '';
+          test = cols[11] || '0';
+          exam = cols[12] || '0';
+          pass = cols[13] || '';
+        } else {
+          // New format without attendance:
+          // [sId, sName, cLevel, term, session, gender, pos, tRemarks, pRemarks, subject, test, exam, pass]
+          pos = cols[6] || '';
+          tRemarks = cols[7] || '';
+          pRemarks = cols[8] || '';
+          subject = cols[9] || '';
+          test = cols[10] || '0';
+          exam = cols[11] || '0';
+          pass = cols[12] || '';
+        }
 
         const testScore = Number(test) || 0;
         const examScore = Number(exam) || 0;
@@ -1620,9 +1650,7 @@ export default function AdminView({
             term: term,
             academicSession: session,
             gender: gender,
-            rollNumber: roll,
             position: pos,
-            attendance: att,
             teacherRemarks: tRemarks,
             principalRemarks: pRemarks,
             accessPassword: pass ? pass.trim() : undefined,
@@ -4546,13 +4574,13 @@ export default function AdminView({
                     <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
                       Paste raw CSV lines matching our diocesan column structure (with optional confidential student access password):
                       <code className="block bg-white p-1.5 border rounded border-slate-200 mt-1 text-[10px] font-mono break-all font-semibold overflow-x-auto text-slate-600">
-                        studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
+                        studentId,studentName,classLevel,term,academicSession,gender,position,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword
                       </code>
                     </p>
 
                     <textarea
                       rows={3}
-                      placeholder="studentId,studentName,classLevel,term,academicSession,gender,rollNumber,position,attendance,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,08,1st of 35,85 of 85 Days,Hardworking.,Excellent.,Physics,29,67,HGASS-PASS-001"
+                      placeholder="studentId,studentName,classLevel,term,academicSession,gender,position,teacherRemarks,principalRemarks,subject,testScore,examScore,accessPassword&#10;HGASS/2026/001,Chinedu Emmanuel Okafor,SS 2,3rd Term,2025/2026,Male,1st of 35,Hardworking.,Excellent.,Physics,29,67,HGASS-PASS-001"
                       value={csvRawText}
                       onChange={(e) => setCsvRawText(e.target.value)}
                       className="block w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
@@ -4873,27 +4901,7 @@ export default function AdminView({
                         className="block w-full px-2 py-1 bg-white border border-emerald-300 rounded text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:outline-hidden mt-1"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Roll Number</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. 08"
-                        value={manualRollNo}
-                        onChange={(e) => setManualRollNo(e.target.value)}
-                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wide">Term Attendance</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 85 of 85 Days"
-                        value={manualAttendance}
-                        onChange={(e) => setManualAttendance(e.target.value)}
-                        className="block w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-green/35 focus:outline-hidden"
-                      />
-                    </div>
+
                     <div className="space-y-1 bg-amber-50/70 p-1.5 rounded border border-amber-200/80">
                       <div className="flex items-center justify-between">
                         <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">

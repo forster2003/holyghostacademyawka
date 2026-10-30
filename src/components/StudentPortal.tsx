@@ -917,12 +917,12 @@ export default function StudentPortal({ results, onNavigatePage }: StudentPortal
                           <p className="font-bold text-slate-800 font-mono">{activeTermlyResult.position}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Attendance</p>
-                          <p className="font-semibold text-slate-800">{activeTermlyResult.attendance}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Student ID / Reg No</p>
+                          <p className="font-semibold text-slate-800 font-mono">{activeTermlyResult.studentId}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Roll Number</p>
-                          <p className="font-mono text-slate-700">{activeTermlyResult.rollNumber || '01'}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Academic Session</p>
+                          <p className="font-semibold text-slate-800 font-mono">{activeTermlyResult.academicSession}</p>
                         </div>
                       </div>
                     </div>

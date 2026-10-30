@@ -57,7 +57,6 @@ export function DailyAttendanceSection({
   const [isAddStudentOpen, setIsAddStudentOpen] = useState<boolean>(false);
   const [newStudentName, setNewStudentName] = useState<string>('');
   const [newStudentId, setNewStudentId] = useState<string>('');
-  const [newStudentRoll, setNewStudentRoll] = useState<string>('');
   const [newStudentGender, setNewStudentGender] = useState<'Male' | 'Female'>('Male');
 
   const [isPrintRegisterOpen, setIsPrintRegisterOpen] = useState<boolean>(false);
@@ -93,9 +92,6 @@ export function DailyAttendanceSection({
     customInClass.forEach(s => mergedMap.set(s.studentId.toUpperCase(), s));
 
     return Array.from(mergedMap.values()).sort((a, b) => {
-      const rollA = parseInt(a.rollNumber, 10) || 999;
-      const rollB = parseInt(b.rollNumber, 10) || 999;
-      if (rollA !== rollB) return rollA - rollB;
       return a.studentName.localeCompare(b.studentName);
     });
   }, [selectedClass, customRosterStudents, results]);
@@ -224,8 +220,7 @@ export function DailyAttendanceSection({
       studentId: generatedId.toUpperCase(),
       studentName: newStudentName.trim(),
       classLevel: selectedClass,
-      gender: newStudentGender,
-      rollNumber: newStudentRoll.trim() || String(classRoster.length + 1).padStart(2, '0')
+      gender: newStudentGender
     };
 
     const updated = [...customRosterStudents, newStudent];
@@ -238,20 +233,18 @@ export function DailyAttendanceSection({
 
     setNewStudentName('');
     setNewStudentId('');
-    setNewStudentRoll('');
     setIsAddStudentOpen(false);
   };
 
   // Export Daily Register to CSV
   const handleExportCSV = () => {
-    const headers = ['Date', 'Academic Session', 'Class Level', 'Roll Number', 'Student ID', 'Student Name', 'Gender', 'Status', 'Remark'];
+    const headers = ['Date', 'Academic Session', 'Class Level', 'Student ID', 'Student Name', 'Gender', 'Status', 'Remark'];
     const rows = classRoster.map(student => {
       const entry = statusMap[student.studentId] || { status: 'Present', remark: '' };
       return [
         selectedDate,
         academicSession,
         selectedClass,
-        student.rollNumber,
         student.studentId,
         `"${student.studentName.replace(/"/g, '""')}"`,
         student.gender,
@@ -298,8 +291,7 @@ export function DailyAttendanceSection({
     const q = searchQuery.toLowerCase();
     return classRoster.filter(s => 
       s.studentName.toLowerCase().includes(q) || 
-      s.studentId.toLowerCase().includes(q) ||
-      s.rollNumber.includes(q)
+      s.studentId.toLowerCase().includes(q)
     );
   }, [classRoster, searchQuery]);
 
@@ -689,14 +681,14 @@ export function DailyAttendanceSection({
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                   <tr>
-                    <th className="px-4 py-3.5 text-center w-14">Roll</th>
+                    <th className="px-4 py-3.5 text-center w-14">#</th>
                     <th className="px-4 py-3.5">Student Biodata</th>
                     <th className="px-4 py-3.5 text-center">Attendance Status Selection</th>
                     <th className="px-4 py-3.5">Remarks / Reason / Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredClassRoster.map((student) => {
+                  {filteredClassRoster.map((student, index) => {
                     const currentEntry = statusMap[student.studentId] || { status: 'Present', remark: '' };
                     const currentStatus = currentEntry.status;
 
@@ -709,9 +701,9 @@ export function DailyAttendanceSection({
                           currentStatus === 'Excused' ? 'bg-blue-50/30' : ''
                         }`}
                       >
-                        {/* Roll Number */}
-                        <td className="px-4 py-3 text-center font-mono font-bold text-slate-500">
-                          {student.rollNumber}
+                        {/* Serial Number */}
+                        <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">
+                          {index + 1}
                         </td>
 
                         {/* Student Biodata */}
@@ -1038,7 +1030,7 @@ export function DailyAttendanceSection({
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                   <tr>
-                    <th className="px-4 py-3 text-center">Roll</th>
+                    <th className="px-4 py-3 text-center">#</th>
                     <th className="px-4 py-3">Student Name & ID</th>
                     <th className="px-4 py-3 text-center">Sessions Logged</th>
                     <th className="px-4 py-3 text-center">Days Present</th>
@@ -1050,12 +1042,12 @@ export function DailyAttendanceSection({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {studentCumulativeProfiles.map((p) => {
+                  {studentCumulativeProfiles.map((p, idx) => {
                     const rate = p.totalDays > 0 ? Math.round(((p.presentDays + p.lateDays) / p.totalDays) * 100) : 100;
                     return (
                       <tr key={p.studentId} className="hover:bg-slate-50 transition">
                         <td className="px-4 py-3 text-center font-mono font-bold text-slate-500">
-                          {p.rollNumber}
+                          {idx + 1}
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-slate-900 leading-tight">{p.studentName}</p>
@@ -1140,7 +1132,7 @@ export function DailyAttendanceSection({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Student Reg ID</label>
                   <input
@@ -1151,29 +1143,17 @@ export function DailyAttendanceSection({
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-brand-green/30"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Roll Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 35"
-                    value={newStudentRoll}
-                    onChange={(e) => setNewStudentRoll(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-brand-green/30"
-                  />
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender</label>
+                  <select
+                    value={newStudentGender}
+                    onChange={(e) => setNewStudentGender(e.target.value as 'Male' | 'Female')}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender</label>
-                <select
-                  value={newStudentGender}
-                  onChange={(e) => setNewStudentGender(e.target.value as 'Male' | 'Female')}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-hidden cursor-pointer"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
@@ -1273,7 +1253,7 @@ export function DailyAttendanceSection({
               <table className="w-full text-left text-xs border border-slate-300">
                 <thead className="bg-slate-100 border-b border-slate-300 text-[10px] font-bold uppercase text-slate-700">
                   <tr>
-                    <th className="p-2 border-r border-slate-300 text-center w-12">Roll</th>
+                    <th className="p-2 border-r border-slate-300 text-center w-12">S/N</th>
                     <th className="p-2 border-r border-slate-300">Student Name</th>
                     <th className="p-2 border-r border-slate-300 w-28">Student Reg ID</th>
                     <th className="p-2 border-r border-slate-300 text-center w-24">Status</th>
@@ -1281,11 +1261,11 @@ export function DailyAttendanceSection({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {classRoster.map((student) => {
+                  {classRoster.map((student, idx) => {
                     const entry = statusMap[student.studentId] || { status: 'Present', remark: '' };
                     return (
                       <tr key={student.studentId}>
-                        <td className="p-2 border-r border-slate-200 text-center font-mono font-bold">{student.rollNumber}</td>
+                        <td className="p-2 border-r border-slate-200 text-center font-mono font-bold">{idx + 1}</td>
                         <td className="p-2 border-r border-slate-200 font-semibold">{student.studentName}</td>
                         <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-600">{student.studentId}</td>
                         <td className="p-2 border-r border-slate-200 text-center font-bold">

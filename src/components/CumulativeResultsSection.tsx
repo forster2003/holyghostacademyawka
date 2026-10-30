@@ -68,8 +68,6 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
   const [classLevel, setClassLevel] = useState<string>('SS 2');
   const [academicSession, setAcademicSession] = useState<string>('2025/2026');
   const [gender, setGender] = useState<string>('Male');
-  const [rollNumber, setRollNumber] = useState<string>('01');
-  const [cumulativeAttendance, setCumulativeAttendance] = useState<string>('250 of 255 Days');
   const [passportPhoto, setPassportPhoto] = useState<string>('');
   const [accessPassword, setAccessPassword] = useState<string>('');
 
@@ -356,7 +354,6 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
     setStudentName(matchedStudent.studentName);
     setClassLevel(matchedStudent.classLevel);
     if (matchedStudent.gender) setGender(matchedStudent.gender);
-    if (matchedStudent.rollNumber) setRollNumber(matchedStudent.rollNumber);
     if (matchedStudent.passportPhoto) setPassportPhoto(matchedStudent.passportPhoto);
     if (matchedStudent.accessPassword) setAccessPassword(matchedStudent.accessPassword);
     setSelectedStudentForAutofill(matchedStudent.studentId);
@@ -549,8 +546,6 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
     setClassLevel(record.classLevel);
     setAcademicSession(record.academicSession);
     setGender(record.gender || 'Male');
-    setRollNumber(record.rollNumber || '01');
-    setCumulativeAttendance(record.cumulativeAttendance || record.attendance || '250 of 255 Days');
     setPassportPhoto(record.passportPhoto || '');
     setAccessPassword(record.accessPassword || '');
 
@@ -667,10 +662,7 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
         term: 'Annual Cumulative',
         academicSession: cleanSession,
         gender,
-        rollNumber: rollNumber.trim() || '01',
         position: position.trim() || `${evaluated.promotionStatus}`,
-        attendance: cumulativeAttendance.trim() || '250 of 255 Days',
-        cumulativeAttendance: cumulativeAttendance.trim() || '250 of 255 Days',
         promotionStatus: finalPromotion,
         grossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
         sessionGrossTotalMarks: grossTotalMarks !== undefined ? grossTotalMarks : evaluated.sessionGrossTotal,
@@ -1059,7 +1051,7 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">
                     Class Level *
@@ -1105,57 +1097,29 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
                     <option value="Female">Female (F)</option>
                   </select>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">
-                    Roll Number / Arm
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 08"
-                    value={rollNumber}
-                    onChange={(e) => setRollNumber(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35"
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">
-                    Annual Session Attendance
+              <div className="space-y-1 bg-amber-50/70 p-2 rounded-lg border border-amber-200">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
+                    <Key className="w-2.5 h-2.5 text-amber-700" />
+                    <span>Student Access PIN / Password</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 250 of 255 Days"
-                    value={cumulativeAttendance}
-                    onChange={(e) => setCumulativeAttendance(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-mono focus:ring-1 focus:ring-brand-green/35"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setAccessPassword(`HGASS-${Math.floor(1000 + Math.random() * 9000)}`)}
+                    className="text-[8.5px] text-brand-green font-bold hover:underline cursor-pointer"
+                  >
+                    Generate PIN
+                  </button>
                 </div>
-
-                <div className="space-y-1 bg-amber-50/70 p-1.5 rounded border border-amber-200">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[9px] font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1">
-                      <Key className="w-2.5 h-2.5 text-amber-700" />
-                      <span>Student Access PIN / Password</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setAccessPassword(`HGASS-${Math.floor(1000 + Math.random() * 9000)}`)}
-                      className="text-[8.5px] text-brand-green font-bold hover:underline cursor-pointer"
-                    >
-                      Generate PIN
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="e.g. HGASS-PASS-001 (Optional)"
-                    value={accessPassword}
-                    onChange={(e) => setAccessPassword(e.target.value)}
-                    className="w-full px-2 py-1 bg-white border border-amber-300 rounded text-xs font-mono font-bold text-amber-900 focus:ring-1 focus:ring-amber-500 focus:outline-hidden"
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. HGASS-PASS-001 (Optional)"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded text-xs font-mono font-bold text-amber-900 focus:ring-1 focus:ring-amber-500 focus:outline-hidden"
+                />
               </div>
             </div>
           </div>
@@ -1964,9 +1928,9 @@ export const CumulativeResultsSection: React.FC<CumulativeResultsSectionProps> =
                     </strong>
                   </p>
                   <p>
-                    <span className="text-slate-500 font-bold uppercase text-[10px]">Gender / Roll No:</span>{' '}
+                    <span className="text-slate-500 font-bold uppercase text-[10px]">Gender:</span>{' '}
                     <span>
-                      {viewTranscriptRecord.gender || 'N/A'} • Roll #{viewTranscriptRecord.rollNumber || '01'}
+                      {viewTranscriptRecord.gender || 'N/A'}
                     </span>
                   </p>
                 </div>

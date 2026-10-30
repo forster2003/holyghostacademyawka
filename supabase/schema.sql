@@ -1,17 +1,37 @@
 -- =========================================================================
--- Holy Ghost Academy Secondary School, Awka (HGASS)
--- Complete Production PostgreSQL & Supabase Database Setup Script
+-- HOLY GHOST ACADEMY SECONDARY SCHOOL, AWKA (HGASS)
+-- COMPLETE PRODUCTION POSTGRESQL & SUPABASE MASTER SCHEMA
 -- Motto: Moral and Academics (MALU CHUKWU, MALU AKWUKO)
 -- Founder: Late Archbishop Dr. Ephraim Ndife Jp2
 -- School Manager: Engr. ThankGod Ndibe B.Engr., M.Engr.
 -- =========================================================================
--- This script configures all database tables, columns, indexes, 
--- Row Level Security (RLS) policies, and starter seed records.
+-- This script contains ALL features and tables created for Holy Ghost Academy:
+--  1. news (Announcements & Diocesan Publications)
+--  2. projects (Infrastructure & School Development)
+--  3. gallery (School Photo Archive)
+--  4. videos (School Video Resource Archive)
+--  5. documents (Academic Syllabus, Handbooks & Downloads with PIN support)
+--  6. student_results (Terminal & Cumulative Results, CA1/CA2/Exam, No Roll No required)
+--  7. contact_messages (Inquiries & Pastoral Support)
+--  8. payments (UBA Direct Bank Transfers, ₦35,000 Tuition, Verification Workflow)
+--  9. hero_slides (Rotating Homepage Carousel Slides & Badges)
+-- 10. staff (Administrative Board, Academic & Non-Academic Staff Registry)
+-- 11. subjects (Curriculum & Departmental Subject Index)
+-- 12. milestones (Homepage Milestone Statistics Counters)
+-- 13. social_handles (Official Social Media Channels & WhatsApp)
+-- 14. calendar_events (Academic Calendar Desk with Audience/Highlight Filters)
+-- 15. daily_attendance (Daily Roll Call Register with Sequential S/N)
+-- 16. fee_schedules (Official Tuition Schedules at ₦35,000 per term)
+-- 17. school_settings (Dynamic Global Config: Header Logo & About Us Image)
+-- 18. Analytics Views (vw_grade_distribution, vw_class_performance_summary)
+-- 19. Search Engine RPC Function (fn_admin_global_search)
+-- 20. Comprehensive Row Level Security (RLS) Policies
+-- 21. Standard Diocesan Starter Seed Data
 --
 -- HOW TO EXECUTE IN SUPABASE:
 -- 1. Log in to your Supabase Dashboard: https://supabase.com/dashboard
--- 2. Select your Holy Ghost Academy project
--- 3. Click on "SQL Editor" in the left sidebar
+-- 2. Open your Holy Ghost Academy project
+-- 3. Click "SQL Editor" in the left sidebar
 -- 4. Click "New Query", paste this entire script, and click "Run" (or Ctrl+Enter)
 -- 5. Safe to run multiple times (idempotent / IF NOT EXISTS)
 -- =========================================================================
@@ -33,7 +53,6 @@ create table if not exists public.news (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Ensure columns exist if table was previously created
 alter table public.news add column if not exists image_url text;
 alter table public.news add column if not exists is_published boolean not null default true;
 
@@ -52,7 +71,6 @@ create table if not exists public.projects (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Ensure percentage_completion and image_url exist
 alter table public.projects add column if not exists image_url text;
 alter table public.projects add column if not exists percentage_completion integer not null default 0;
 
@@ -89,7 +107,7 @@ create table if not exists public.documents (
   file_type text not null,
   file_size text not null,
   download_url text not null,
-  access_password text, -- Optional security password/PIN assigned by admin
+  access_password text, -- Optional confidential PIN for protected downloads
   upload_date date not null default current_date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -97,9 +115,10 @@ create table if not exists public.documents (
 alter table public.documents add column if not exists access_password text;
 
 -- -------------------------------------------------------------------------
--- 6. STUDENT REPORT CARDS & TERMINAL RESULTS TABLE
+-- 6. STUDENT REPORT CARDS, TERMINAL & CUMULATIVE RESULTS TABLE
 -- -------------------------------------------------------------------------
--- Nested subject scores (ca1Score, ca2Score, testScore, examScore, grade, remarks) stored in JSONB
+-- Note: Roll number is NOT required. Identification is driven by student_id & student_name.
+-- Subject scores store CA 1 (20), CA 2 (20), Exam (60), Total (100), Grade, Remarks in JSONB.
 create table if not exists public.student_results (
   id text primary key,
   student_id text not null,
@@ -109,7 +128,7 @@ create table if not exists public.student_results (
   term text not null,
   academic_session text not null,
   gender text not null default 'Male',
-  roll_number text not null,
+  roll_number text default null, -- Optional / legacy only (no longer required)
   position text not null,
   attendance text not null,
   promotion_status text,
@@ -118,15 +137,26 @@ create table if not exists public.student_results (
   grade_point numeric,
   accredited_grade_bracket text,
   class_standing text,
+  pass_fail_status text,
   principal_remarks text,
   teacher_remarks text,
   subject_scores jsonb not null default '[]'::jsonb,
-  access_password text, -- Confidential PIN assigned by admin for result verification
+  access_password text, -- Student portal PIN
+  is_cumulative boolean not null default false,
+  first_term_avg numeric,
+  second_term_avg numeric,
+  third_term_avg numeric,
+  annual_average numeric,
+  annual_total_marks numeric,
+  annual_grade text,
+  cumulative_position text,
+  promotion_decision text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   constraint unique_student_report_term_session unique (student_id, term, academic_session)
 );
 
--- Ensure all modern reporting columns exist
+-- Ensure optionality & presence of modern result columns
+alter table public.student_results alter column roll_number drop not null;
 alter table public.student_results add column if not exists passport_photo text;
 alter table public.student_results add column if not exists promotion_status text;
 alter table public.student_results add column if not exists gross_total_marks numeric;
@@ -136,6 +166,15 @@ alter table public.student_results add column if not exists accredited_grade_bra
 alter table public.student_results add column if not exists class_standing text;
 alter table public.student_results add column if not exists pass_fail_status text;
 alter table public.student_results add column if not exists access_password text;
+alter table public.student_results add column if not exists is_cumulative boolean not null default false;
+alter table public.student_results add column if not exists first_term_avg numeric;
+alter table public.student_results add column if not exists second_term_avg numeric;
+alter table public.student_results add column if not exists third_term_avg numeric;
+alter table public.student_results add column if not exists annual_average numeric;
+alter table public.student_results add column if not exists annual_total_marks numeric;
+alter table public.student_results add column if not exists annual_grade text;
+alter table public.student_results add column if not exists cumulative_position text;
+alter table public.student_results add column if not exists promotion_decision text;
 
 -- -------------------------------------------------------------------------
 -- 7. CONTACT MESSAGES & INQUIRIES TABLE
@@ -156,6 +195,7 @@ alter table public.contact_messages add column if not exists is_read boolean not
 -- -------------------------------------------------------------------------
 -- 8. SCHOOL FEES & DIRECT BANK PAYMENT TRANSACTIONS TABLE
 -- -------------------------------------------------------------------------
+-- Tuition: ₦35,000 for Junior & Senior Secondary. UBA direct bank verification workflow.
 create table if not exists public.payments (
   id text primary key,
   reference_number text not null unique,
@@ -166,7 +206,7 @@ create table if not exists public.payments (
   student_id text,
   class_level text not null,
   purpose text not null,
-  amount numeric not null check (amount >= 0),
+  amount numeric not null default 35000 check (amount >= 0),
   payment_date date not null default current_date,
   payment_method text not null,
   bank_reference text not null,
@@ -188,7 +228,7 @@ alter table public.payments add column if not exists student_name text;
 alter table public.payments add column if not exists student_id text;
 alter table public.payments add column if not exists class_level text;
 alter table public.payments add column if not exists purpose text;
-alter table public.payments add column if not exists amount numeric default 0;
+alter table public.payments add column if not exists amount numeric default 35000;
 alter table public.payments add column if not exists payment_date date default current_date;
 alter table public.payments add column if not exists payment_method text;
 alter table public.payments add column if not exists bank_reference text;
@@ -198,28 +238,6 @@ alter table public.payments add column if not exists status text default 'Pendin
 alter table public.payments add column if not exists verified_by text;
 alter table public.payments add column if not exists verified_at timestamp with time zone;
 alter table public.payments add column if not exists rejection_reason text;
-alter table public.payments add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
-
-create or replace function public.process_payment_timestamp()
-returns trigger as $$
-begin
-  new.updated_at := timezone('utc'::text, now());
-  if new.status = 'Verified' and (old.status is distinct from 'Verified' or new.verified_at is null) then
-    new.verified_at := timezone('utc'::text, now());
-    if new.verified_by is null or new.verified_by = '' then
-      new.verified_by := 'Bursary Department (Admin)';
-    end if;
-  elsif new.status <> 'Verified' then
-    new.verified_at := null;
-  end if;
-  return new;
-end;
-$$ language plpgsql;
-
-drop trigger if exists trg_process_payment_timestamp on public.payments;
-create trigger trg_process_payment_timestamp
-before insert or update on public.payments
-for each row execute function public.process_payment_timestamp();
 
 -- -------------------------------------------------------------------------
 -- 9. HOMEPAGE HERO SLIDESHOW TABLE
@@ -227,77 +245,28 @@ for each row execute function public.process_payment_timestamp();
 create table if not exists public.hero_slides (
   id text primary key,
   title text not null,
-  subtitle text not null default '',
-  description text,
+  subtitle text not null,
   image_url text not null,
-  image text,
   badge text,
   slide_order integer not null default 0,
-  display_order integer default 0,
-  is_active boolean not null default true,
-  link_url text,
-  button_text text default 'Learn More',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.hero_slides add column if not exists title text;
-alter table public.hero_slides add column if not exists subtitle text default '';
-alter table public.hero_slides add column if not exists description text;
-alter table public.hero_slides add column if not exists image_url text;
-alter table public.hero_slides add column if not exists image text;
 alter table public.hero_slides add column if not exists badge text;
 alter table public.hero_slides add column if not exists slide_order integer not null default 0;
-alter table public.hero_slides add column if not exists display_order integer default 0;
-alter table public.hero_slides add column if not exists is_active boolean not null default true;
-alter table public.hero_slides add column if not exists link_url text;
-alter table public.hero_slides add column if not exists button_text text default 'Learn More';
-alter table public.hero_slides add column if not exists created_at timestamp with time zone default timezone('utc'::text, now()) not null;
-alter table public.hero_slides add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
-
-create or replace function public.sync_hero_slides_fields()
-returns trigger as $$
-begin
-  if (new.image_url is null or new.image_url = '') and (new.image is not null and new.image <> '') then
-    new.image_url := new.image;
-  end if;
-  if (new.image is null or new.image = '') and (new.image_url is not null and new.image_url <> '') then
-    new.image := new.image_url;
-  end if;
-  if (new.subtitle is null or new.subtitle = '') and (new.description is not null and new.description <> '') then
-    new.subtitle := new.description;
-  end if;
-  if (new.description is null or new.description = '') and (new.subtitle is not null and new.subtitle <> '') then
-    new.description := new.subtitle;
-  end if;
-  if (new.slide_order is null or new.slide_order = 0) and (new.display_order is not null and new.display_order <> 0) then
-    new.slide_order := new.display_order;
-  end if;
-  if (new.display_order is null or new.display_order = 0) and (new.slide_order is not null and new.slide_order <> 0) then
-    new.display_order := new.slide_order;
-  end if;
-  new.updated_at := timezone('utc'::text, now());
-  return new;
-end;
-$$ language plpgsql;
-
-drop trigger if exists trg_sync_hero_slides_fields on public.hero_slides;
-create trigger trg_sync_hero_slides_fields
-before insert or update on public.hero_slides
-for each row execute function public.sync_hero_slides_fields();
 
 -- -------------------------------------------------------------------------
--- 10. STAFF & FACULTY DIRECTORY TABLE
+-- 10. ADMINISTRATIVE BOARD & STAFF FACULTY DIRECTORY TABLE
 -- -------------------------------------------------------------------------
 create table if not exists public.staff (
   id text primary key,
   name text not null,
   role text not null,
   category text not null check (category in ('Administrative Board', 'Academic Staff', 'Non-Academic Staff')),
-  qualifications text not null default '',
-  image text not null default 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
-  description text not null default '',
-  "desc" text default '',
+  qualifications text not null,
+  image text not null,
+  description text not null,
+  desc text,
   email text,
   phone text,
   display_order integer default 0,
@@ -305,23 +274,19 @@ create table if not exists public.staff (
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.staff add column if not exists qualifications text not null default '';
-alter table public.staff add column if not exists image text not null default 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400';
-alter table public.staff add column if not exists description text not null default '';
-alter table public.staff add column if not exists "desc" text default '';
-alter table public.staff add column if not exists email text;
-alter table public.staff add column if not exists phone text;
+alter table public.staff add column if not exists "desc" text;
+alter table public.staff add column if not exists description text;
 alter table public.staff add column if not exists display_order integer default 0;
-alter table public.staff add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 
+-- Auto-synchronize desc and description columns
 create or replace function public.sync_staff_description()
 returns trigger as $$
 begin
-  if new.description is null or new.description = '' then
-    new.description := coalesce(new."desc", '');
+  if (new.description is null or new.description = '') and (new."desc" is not null and new."desc" <> '') then
+    new.description := new."desc";
   end if;
-  if new."desc" is null or new."desc" = '' then
-    new."desc" := coalesce(new.description, '');
+  if (new."desc" is null or new."desc" = '') and (new.description is not null and new.description <> '') then
+    new."desc" := new.description;
   end if;
   new.updated_at := timezone('utc'::text, now());
   return new;
@@ -332,11 +297,6 @@ drop trigger if exists trg_sync_staff_description on public.staff;
 create trigger trg_sync_staff_description
 before insert or update on public.staff
 for each row execute function public.sync_staff_description();
-
-create or replace view public.administrative_board as
-  select * from public.staff
-  where category = 'Administrative Board'
-  order by display_order asc;
 
 -- -------------------------------------------------------------------------
 -- 11. SCHOOL CURRICULUM SUBJECTS TABLE
@@ -358,19 +318,12 @@ create table if not exists public.subjects (
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.subjects add column if not exists name text;
-alter table public.subjects add column if not exists category text default 'Junior General';
-alter table public.subjects add column if not exists level text default 'All Levels';
 alter table public.subjects add column if not exists "desc" text default '';
 alter table public.subjects add column if not exists description text default '';
 alter table public.subjects add column if not exists display_order integer not null default 0;
-alter table public.subjects add column if not exists syllabus_code text;
-alter table public.subjects add column if not exists department text default '';
-alter table public.subjects add column if not exists weekly_periods integer default 4;
-alter table public.subjects add column if not exists is_active boolean not null default true;
 alter table public.subjects add column if not exists is_core boolean not null default false;
-alter table public.subjects add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 
+-- Auto-synchronize desc and description columns
 create or replace function public.sync_subject_fields()
 returns trigger as $$
 begin
@@ -386,8 +339,6 @@ end;
 $$ language plpgsql;
 
 drop trigger if exists trg_sync_subject_fields on public.subjects;
-drop trigger if exists trg_sync_subject_description on public.subjects;
-
 create trigger trg_sync_subject_fields
 before insert or update on public.subjects
 for each row execute function public.sync_subject_fields();
@@ -427,44 +378,51 @@ create table if not exists public.social_handles (
 create table if not exists public.calendar_events (
   id text primary key,
   title text not null,
+  event_type text not null default 'Academic' check (event_type in ('Exam', 'Holiday', 'Resumption', 'Meeting', 'Sports', 'Religious', 'Deadline', 'Academic', 'Other')),
   start_date date not null,
   end_date date,
-  category text not null check (category in ('Term Dates', 'Examination', 'Holiday', 'Academic', 'Co-Curricular', 'Meeting', 'Special')),
+  term text not null default '1st Term' check (term in ('1st Term', '2nd Term', '3rd Term', 'Annual', 'All Terms')),
+  academic_session text not null default '2026/2027',
   description text,
-  term text default 'All Terms' check (term in ('1st Term', '2nd Term', '3rd Term', 'All Terms')),
-  session text default '2026/2027',
-  location text,
+  target_audience text not null default 'All Students' check (target_audience in ('All Students', 'Day Students', 'JSS Only', 'SS Only', 'Parents & Guardians', 'Staff')),
+  location text default 'Academy Campus',
+  is_highlight boolean not null default false,
   is_important boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.calendar_events add column if not exists start_date date;
-alter table public.calendar_events add column if not exists end_date date;
-alter table public.calendar_events add column if not exists category text default 'Academic';
+alter table public.calendar_events add column if not exists event_type text default 'Academic';
+alter table public.calendar_events add column if not exists target_audience text default 'All Students';
+alter table public.calendar_events add column if not exists location text default 'Academy Campus';
+alter table public.calendar_events add column if not exists is_highlight boolean default false;
 alter table public.calendar_events add column if not exists is_important boolean default false;
-alter table public.calendar_events add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 
 -- -------------------------------------------------------------------------
--- 15. DAILY STUDENT ATTENDANCE TRACKING TABLE
+-- 15. DAILY STUDENT ATTENDANCE SYSTEM TABLE
 -- -------------------------------------------------------------------------
+-- Sorted alphabetically by student name with sequential row numbering (# / S/N)
 create table if not exists public.daily_attendance (
   id text primary key,
+  date date not null default current_date,
   student_id text not null,
   student_name text not null,
   class_level text not null,
-  date date not null default current_date,
+  gender text default 'Male',
+  roll_number text default null, -- Optional / legacy only
   status text not null check (status in ('Present', 'Absent', 'Late', 'Excused')),
-  notes text,
-  recorded_by text default 'Class Teacher',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  remark text,
+  academic_session text not null default '2025/2026',
+  recorded_by text default 'Admin Registrar',
+  recorded_at timestamp with time zone default timezone('utc'::text, now()) not null,
   constraint unique_student_attendance_day unique (student_id, date)
 );
 
-alter table public.daily_attendance add column if not exists notes text;
-alter table public.daily_attendance add column if not exists recorded_by text default 'Class Teacher';
-alter table public.daily_attendance add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+alter table public.daily_attendance alter column roll_number drop not null;
+alter table public.daily_attendance add column if not exists gender text default 'Male';
+alter table public.daily_attendance add column if not exists remark text;
+alter table public.daily_attendance add column if not exists academic_session text default '2025/2026';
+alter table public.daily_attendance add column if not exists recorded_by text default 'Admin Registrar';
 
 -- -------------------------------------------------------------------------
 -- 16. OFFICIAL TUITION & FEE SCHEDULES TABLE
@@ -481,13 +439,169 @@ create table if not exists public.fee_schedules (
   science_lab_fee numeric not null default 0,
   medical_development_levy numeric not null default 0,
   pta_levy numeric not null default 0,
-  total_payable numeric not null default 0,
+  total_payable numeric not null default 35000,
   due_date date,
   notes text,
   is_active boolean not null default true,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- -------------------------------------------------------------------------
+-- 17. SCHOOL SETTINGS & BRANDING CONFIGURATION TABLE
+-- -------------------------------------------------------------------------
+-- Supports dynamic Header Logo/Crest & About Us Section Hero Image Customizer
+create table if not exists public.school_settings (
+  setting_key text primary key,
+  setting_value text not null,
+  description text,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.about_us_config (
+  id text primary key default 'primary',
+  image_url text not null default 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=800',
+  badge_text text not null default 'Est. Pentecostal Church',
+  caption text default 'Holy Ghost Academy Campus Building - Kamali Homes, Ngozika Housing Estate Awka'
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- -------------------------------------------------------------------------
+-- 18. RECHARTS STUDENT PERFORMANCE ANALYTICS VIEWS
+-- -------------------------------------------------------------------------
+create or replace view public.vw_grade_distribution as
+with normalized_scores as (
+  select 
+    class_level,
+    term,
+    academic_session,
+    terminal_average,
+    case
+      when terminal_average >= 75 then 'A1'
+      when terminal_average >= 70 then 'B2'
+      when terminal_average >= 65 then 'B3'
+      when terminal_average >= 60 then 'C4'
+      when terminal_average >= 55 then 'C5'
+      when terminal_average >= 50 then 'C6'
+      when terminal_average >= 45 then 'D7'
+      when terminal_average >= 40 then 'E8'
+      else 'F9'
+    end as letter_grade,
+    case
+      when terminal_average >= 75 then 'Distinction (A1)'
+      when terminal_average >= 65 then 'Very Good (B2-B3)'
+      when terminal_average >= 50 then 'Credit Pass (C4-C6)'
+      when terminal_average >= 40 then 'Pass (D7-E8)'
+      else 'Fail (F9)'
+    end as grade_group
+  from public.student_results
+  where terminal_average is not null
+)
+select 
+  class_level,
+  term,
+  academic_session,
+  letter_grade,
+  grade_group,
+  count(*) as student_count,
+  round((count(*)::numeric * 100.0 / nullif(sum(count(*)) over (partition by class_level, term, academic_session), 0)), 1) as percentage
+from normalized_scores
+group by class_level, term, academic_session, letter_grade, grade_group
+order by class_level, letter_grade;
+
+create or replace view public.vw_class_performance_summary as
+select 
+  class_level,
+  term,
+  academic_session,
+  count(*) as total_students,
+  round(avg(terminal_average), 1) as class_average,
+  round(max(terminal_average), 1) as highest_average,
+  round(min(terminal_average), 1) as lowest_average,
+  count(case when terminal_average >= 50 then 1 end) as passing_students,
+  round((count(case when terminal_average >= 50 then 1 end)::numeric * 100.0 / nullif(count(*), 0)), 1) as pass_rate_percentage,
+  count(case when terminal_average >= 75 then 1 end) as distinction_count
+from public.student_results
+where terminal_average is not null
+group by class_level, term, academic_session
+order by class_level;
+
+-- -------------------------------------------------------------------------
+-- 19. UNIFIED GLOBAL SEARCH FUNCTION (Header & Admin Spotlight)
+-- -------------------------------------------------------------------------
+create or replace function public.fn_admin_global_search(search_term text)
+returns table (
+  entity_type text,
+  entity_id text,
+  title text,
+  subtitle text,
+  metadata text,
+  url_or_target text
+) language plpgsql security definer as $$
+declare
+  q text := trim(search_term);
+begin
+  if q is null or length(q) = 0 then
+    return;
+  end if;
+
+  return query
+  select 
+    'Student'::text as entity_type,
+    sr.id as entity_id,
+    sr.student_name as title,
+    ('ID: ' || sr.student_id || ' • ' || sr.class_level || ' • ' || sr.academic_session)::text as subtitle,
+    ('Avg: ' || coalesce(sr.terminal_average::text, 'N/A') || '% • Position: ' || coalesce(sr.position, 'N/A'))::text as metadata,
+    ('results')::text as url_or_target
+  from public.student_results sr
+  where sr.student_name ilike ('%' || q || '%')
+     or sr.student_id ilike ('%' || q || '%')
+     or sr.class_level ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'Document'::text as entity_type,
+    d.id as entity_id,
+    d.title as title,
+    (upper(d.file_type) || ' Document • ' || d.file_size)::text as subtitle,
+    ('Uploaded: ' || d.upload_date::text)::text as metadata,
+    ('documents')::text as url_or_target
+  from public.documents d
+  where d.title ilike ('%' || q || '%')
+     or d.file_type ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'News'::text as entity_type,
+    n.id as entity_id,
+    n.title as title,
+    ('Category: ' || n.category || ' • Published: ' || n.date::text)::text as subtitle,
+    substring(n.content, 1, 90) || '...' as metadata,
+    ('news')::text as url_or_target
+  from public.news n
+  where n.title ilike ('%' || q || '%')
+     or n.content ilike ('%' || q || '%')
+     or n.category ilike ('%' || q || '%')
+
+  union all
+
+  select 
+    'Calendar Event'::text as entity_type,
+    ce.id as entity_id,
+    ce.title as title,
+    ('Date: ' || ce.start_date::text || ' • ' || ce.event_type || ' (' || ce.term || ')')::text as subtitle,
+    coalesce(ce.location, 'Academy Campus') as metadata,
+    ('calendar')::text as url_or_target
+  from public.calendar_events ce
+  where ce.title ilike ('%' || q || '%')
+     or ce.event_type ilike ('%' || q || '%')
+     or coalesce(ce.description, '') ilike ('%' || q || '%')
+
+  limit 50;
+end;
+$$;
 
 -- -------------------------------------------------------------------------
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
@@ -504,17 +618,14 @@ create index if not exists idx_payments_student_id on public.payments(student_id
 create index if not exists idx_hero_slides_order on public.hero_slides(slide_order asc);
 create index if not exists idx_staff_category on public.staff(category);
 create index if not exists idx_subjects_level on public.subjects(level);
-create index if not exists idx_calendar_events_start_date on public.calendar_events(start_date);
-create index if not exists idx_calendar_events_category on public.calendar_events(category);
-create index if not exists idx_daily_attendance_date on public.daily_attendance(date desc);
-create index if not exists idx_daily_attendance_class on public.daily_attendance(class_level, date);
+create index if not exists idx_calendar_events_start_date on public.calendar_events(start_date asc);
+create index if not exists idx_daily_attendance_date_class on public.daily_attendance(date desc, class_level);
 create index if not exists idx_daily_attendance_student on public.daily_attendance(student_id);
 create index if not exists idx_fee_schedules_tier on public.fee_schedules(class_tier, student_type);
 
 -- -------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- -------------------------------------------------------------------------
--- Enable RLS across all tables
 alter table public.news enable row level security;
 alter table public.projects enable row level security;
 alter table public.gallery enable row level security;
@@ -531,8 +642,10 @@ alter table public.social_handles enable row level security;
 alter table public.calendar_events enable row level security;
 alter table public.daily_attendance enable row level security;
 alter table public.fee_schedules enable row level security;
+alter table public.school_settings enable row level security;
+alter table public.about_us_config enable row level security;
 
--- Drop existing default policies if re-running script to avoid duplicate errors
+-- Drop existing policies if re-running script to avoid conflict
 drop policy if exists "Allow all access to news" on public.news;
 drop policy if exists "Allow all access to projects" on public.projects;
 drop policy if exists "Allow all access to gallery" on public.gallery;
@@ -549,8 +662,10 @@ drop policy if exists "Allow all access to social_handles" on public.social_hand
 drop policy if exists "Allow all access to calendar_events" on public.calendar_events;
 drop policy if exists "Allow all access to daily_attendance" on public.daily_attendance;
 drop policy if exists "Allow all access to fee_schedules" on public.fee_schedules;
+drop policy if exists "Allow all access to school_settings" on public.school_settings;
+drop policy if exists "Allow all access to about_us_config" on public.about_us_config;
 
--- Clean, complete access policies for web portal operations
+-- Create clean open access policies for public & administrative portal sync
 create policy "Allow all access to news" on public.news for all using (true) with check (true);
 create policy "Allow all access to projects" on public.projects for all using (true) with check (true);
 create policy "Allow all access to gallery" on public.gallery for all using (true) with check (true);
@@ -567,16 +682,23 @@ create policy "Allow all access to social_handles" on public.social_handles for 
 create policy "Allow all access to calendar_events" on public.calendar_events for all using (true) with check (true);
 create policy "Allow all access to daily_attendance" on public.daily_attendance for all using (true) with check (true);
 create policy "Allow all access to fee_schedules" on public.fee_schedules for all using (true) with check (true);
+create policy "Allow all access to school_settings" on public.school_settings for all using (true) with check (true);
+create policy "Allow all access to about_us_config" on public.about_us_config for all using (true) with check (true);
 
 -- -------------------------------------------------------------------------
--- INITIAL SEED DATA (HOLY GHOST ACADEMY AWKA)
+-- INITIAL SEED RECORDS (HOLY GHOST ACADEMY AWKA)
 -- -------------------------------------------------------------------------
--- Default Milestones
+-- 1. Default Milestone Statistics
 insert into public.milestones (id, enrolled_students, professional_educators, exemplary_graduates, state_and_national_awards)
 values ('current', '450+', '38', '1,200+', '15')
-on conflict (id) do nothing;
+on conflict (id) do update set
+  enrolled_students = excluded.enrolled_students,
+  professional_educators = excluded.professional_educators,
+  exemplary_graduates = excluded.exemplary_graduates,
+  state_and_national_awards = excluded.state_and_national_awards,
+  updated_at = timezone('utc'::text, now());
 
--- Default Social Media
+-- 2. Default Social Media Handles
 insert into public.social_handles (id, facebook, instagram, twitter, youtube, tiktok, whatsapp, linkedin)
 values (
   'main',
@@ -588,44 +710,74 @@ values (
   'https://wa.me/2349054145339?text=Hello%20Holy%20Ghost%20Academy%2C%20I%20would%20like%20to%20inquire%20about%20admissions.',
   ''
 )
-on conflict (id) do nothing;
+on conflict (id) do update set
+  facebook = excluded.facebook,
+  instagram = excluded.instagram,
+  twitter = excluded.twitter,
+  youtube = excluded.youtube,
+  whatsapp = excluded.whatsapp,
+  updated_at = timezone('utc'::text, now());
 
--- Default Homepage Carousel Slides
+-- 3. Default Institutional Branding & Header Logo Settings
+insert into public.school_settings (setting_key, setting_value, description)
+values
+  ('header_logo', 'https://i.ibb.co/HTP5dHHD/Whats-App-Image-2026-06-30-at-10-02-49-AM.jpg', 'Official Holy Ghost Academy circular crest and emblem for navigation header'),
+  ('school_motto', 'Moral and Academics (MALU CHUKWU, MALU AKWUKO)', 'Diocesan school motto and guiding educational ethos'),
+  ('tuition_fee_term', '35000', 'Termly tuition fee in Naira for JSS and SSS students')
+on conflict (setting_key) do update set
+  setting_value = excluded.setting_value,
+  updated_at = timezone('utc'::text, now());
+
+-- 4. Default About Us Section Visual
+insert into public.about_us_config (id, image_url, badge_text, caption)
+values (
+  'primary',
+  'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=800',
+  'Est. Pentecostal Church',
+  'Holy Ghost Academy Campus Building - Kamali Homes, Ngozika Housing Estate Awka'
+)
+on conflict (id) do update set
+  image_url = excluded.image_url,
+  badge_text = excluded.badge_text,
+  updated_at = timezone('utc'::text, now());
+
+-- 5. Default Homepage Carousel Slides
 insert into public.hero_slides (id, title, subtitle, image_url, badge, slide_order)
 values 
   ('slide-1', 'Excellence in Catholic Education', 'Nurturing intellectual curiosity, moral rectitude, and disciplined future leaders in Awka, Anambra State.', 'https://i.ibb.co/hRq45s2h/hga14.jpg', 'HOLY GHOST ACADEMY, AWKA', 1),
   ('slide-2', 'State-of-the-Art Science & Tech Labs', 'Equipping young scholars with hands-on practical skills in STEM, robotics, and digital computing.', 'https://i.ibb.co/210s8k8Z/hga12.jpg', 'WORLD CLASS INFRASTRUCTURE', 2),
   ('slide-3', 'Holistic Spiritual & Moral Formation', 'Rooted in Catholic discipline, prayer life, character molding, and academic rigor.', 'https://i.ibb.co/hxbz0z6K/hga9.jpg', 'MORAL & ACADEMIC INTEGRITY', 3),
   ('slide-4', 'Proud Tradition of Sporting & Arts Feats', 'Fostering teamwork, athletic prowess, and creative excellence across state and national competitions.', 'https://i.ibb.co/Y485x1hY/hga11.jpg', 'CO-CURRICULAR DISTINCTION', 4)
-on conflict (id) do nothing;
+on conflict (id) do update set
+  title = excluded.title,
+  subtitle = excluded.subtitle,
+  image_url = excluded.image_url,
+  badge = excluded.badge,
+  slide_order = excluded.slide_order;
 
--- Sample Leadership & Staff Records
-insert into public.staff (
-  id, name, role, category, qualifications, image, description, "desc", email, phone, display_order
-)
+-- 6. Administrative Board & Founder Leadership
+insert into public.staff (id, name, role, category, qualifications, image, description, "desc", display_order)
 values
-  ('staff-founder', 'Late Archbishop Dr. Ephraim Ndife Jp2', 'Founding Father & Visionary', 'Administrative Board', 'Doctor of Divinity, Archbishop Emeritus', 'https://i.ibb.co/DPkn77Md/hg16.jpg', 'A revered visionary shepherd whose lifelong devotion to educational empowerment and Christian moral discipline birthed Holy Ghost Academy Awka.', 'A revered visionary shepherd whose lifelong devotion to educational empowerment and Christian moral discipline birthed Holy Ghost Academy Awka.', 'holyghostacademy@gmail.com', '+234 (0) 905 414 5339', 1),
-  ('staff-1', 'Engr. ThankGod Ndibe B.Engr., M.Engr.', 'School Manager & Director', 'Administrative Board', 'B.Engr., M.Engr. (Engineering & Educational Administration)', 'https://i.ibb.co/pj9SBTbc/cccg.jpg', 'Visionary manager and educational administrator driving academic excellence, moral grounding, and global STEM learning standards at Holy Ghost Academy.', 'Visionary manager and educational administrator driving academic excellence, moral grounding, and global STEM learning standards at Holy Ghost Academy.', 'holyghostacademy@gmail.com', '+234 (0) 905 414 5339', 2),
-  ('staff-2', 'Lady Beatrice Obi-Aniche', 'Vice Principal (Academics)', 'Administrative Board', 'B.Sc (Ed) Chemistry, M.Ed (Curriculum Design)', 'https://images.unsplash.com/photo-1580894732444-8fecef2271ff?auto=format&fit=crop&q=80&w=400', 'Lady Beatrice coordinates curriculum implementation and science exhibition championships, bringing 22 years of elite educational experience.', 'Lady Beatrice coordinates curriculum implementation and science exhibition championships, bringing 22 years of elite educational experience.', 'academics@holyghostacademy.edu.ng', '+234 803 987 6543', 3),
-  ('staff-3', 'Rev. Sister Martha Chika, IHM', 'Vice Principal (Administration & Welfare)', 'Administrative Board', 'B.A (Religious Studies), PGDE', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400', 'Sister Martha supervises school board rules, student codebook compliance, student welfare, and moral development programs.', 'Sister Martha supervises school board rules, student codebook compliance, student welfare, and moral development programs.', 'welfare@holyghostacademy.edu.ng', '+234 806 555 1234', 4),
-  ('staff-4', 'Mr. John Bosco Okafor', 'Dean of Studies & Science Coordinator', 'Administrative Board', 'B.Sc (Physics), M.Sc (Industrial Electronics)', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400', 'An award-winning instructor, Mr. John Bosco coordinates lab modernizations, diagnostic assessments, and WAEC chemistry and physics preparatory camps.', 'An award-winning instructor, Mr. John Bosco coordinates lab modernizations, diagnostic assessments, and WAEC chemistry and physics preparatory camps.', 'dean.studies@holyghostacademy.edu.ng', '+234 802 333 4455', 5),
-  ('staff-5', 'Mrs. Ngozi Ezeh', 'Head of Department (Mathematics)', 'Academic Staff', 'B.Sc (Ed) Mathematics, TRCN Certified', 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400', 'With over 14 years of teaching excellence, Mrs. Ezeh mentors the national mathematics olympiad team and champions logical problem-solving.', 'With over 14 years of teaching excellence, Mrs. Ezeh mentors the national mathematics olympiad team and champions logical problem-solving.', 'maths@holyghostacademy.edu.ng', '+234 814 111 2233', 6),
-  ('staff-6', 'Mr. Emeka Nnamdi', 'Head of ICT & Robotics Department', 'Academic Staff', 'B.Eng (Computer Engineering), CCNA', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400', 'Coordinates software coding clubs, digital laboratory sessions, and state robotics exhibitions, ensuring students acquire 21st-century tech skills.', 'Coordinates software coding clubs, digital laboratory sessions, and state robotics exhibitions, ensuring students acquire 21st-century tech skills.', 'ict@holyghostacademy.edu.ng', '+234 805 777 8899', 7),
-  ('staff-7', 'Mrs. Amaka Umeh', 'Head of Languages & Senior English Master', 'Academic Staff', 'B.A (English), M.A (Linguistics)', 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=400', 'Passionate literary scholar leading debate societies, diction training, and national essay contests across southeastern secondary schools.', 'Passionate literary scholar leading debate societies, diction training, and national essay contests across southeastern secondary schools.', 'languages@holyghostacademy.edu.ng', '+234 816 444 5566', 8),
-  ('staff-8', 'Mr. Anthony Maduka', 'School Bursar & Chief Accountant', 'Non-Academic Staff', 'B.Sc (Accounting), ICAN in view', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400', 'Oversees student fees administration, UBA direct billing reconciliation, inventory logistics, and diocesan financial auditing.', 'Oversees student fees administration, UBA direct billing reconciliation, inventory logistics, and diocesan financial auditing.', 'bursar@holyghostacademy.edu.ng', '+234 803 666 7788', 9)
+  ('staff-founder', 'Late Archbishop Dr. Ephraim Ndife Jp2', 'Founding Father & Visionary', 'Administrative Board', 'Doctor of Divinity, Archbishop Emeritus', 'https://i.ibb.co/DPkn77Md/hg16.jpg', 'A revered visionary shepherd whose lifelong devotion to educational empowerment and Christian moral discipline birthed Holy Ghost Academy Awka.', 'A revered visionary shepherd whose lifelong devotion to educational empowerment and Christian moral discipline birthed Holy Ghost Academy Awka.', 1),
+  ('staff-manager', 'Engr. ThankGod Ndibe B.Engr., M.Engr.', 'School Manager & Director', 'Administrative Board', 'B.Engr., M.Engr. (COREN Regd)', 'https://i.ibb.co/pj9SBTbc/cccg.jpg', 'Guiding the academy with forward-thinking leadership, administrative excellence, technological modernism, and dedicated student pastoral care.', 'Guiding the academy with forward-thinking leadership, administrative excellence, technological modernism, and dedicated student pastoral care.', 2)
 on conflict (id) do update set
   name = excluded.name,
   role = excluded.role,
-  category = excluded.category,
-  qualifications = excluded.qualifications,
   image = excluded.image,
+  qualifications = excluded.qualifications,
   description = excluded.description,
-  "desc" = excluded."desc",
-  email = excluded.email,
-  phone = excluded.phone,
-  display_order = excluded.display_order,
-  updated_at = timezone('utc'::text, now());
+  "desc" = excluded."desc";
+
+-- 7. Official Fee Schedule (₦35,000 Tuition per Term)
+insert into public.fee_schedules (id, class_tier, student_type, academic_term, academic_session, tuition_fee, total_payable, notes)
+values
+  ('fee-jss-1', 'Junior Secondary (JSS 1 - JSS 3)', 'Day Student', '1st Term', '2026/2027', 35000, 35000, 'Standard JSS tuition fee per term covering academic tuition, laboratory practicals, and library facilities.'),
+  ('fee-sss-1', 'Senior Secondary (SSS 1 - SSS 3)', 'Day Student', '1st Term', '2026/2027', 35000, 35000, 'Standard SSS tuition fee per term covering academic tuition, science laboratories, and ICT resource center access.')
+on conflict (id) do update set
+  tuition_fee = excluded.tuition_fee,
+  total_payable = excluded.total_payable,
+  notes = excluded.notes;
 
 -- =========================================================================
--- END OF SCRIPT
+-- END OF MASTER SCRIPT
 -- =========================================================================
